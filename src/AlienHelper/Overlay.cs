@@ -1,0 +1,722 @@
+using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Runtime.InteropServices;
+using System.Text;
+using AlienHelper.UI;
+using static AlienHelper.UI.Theme;
+
+namespace AlienHelper;
+
+/// <summary>
+/// Small always-on-top, click-through stats panel for games. Shown automatically while a fullscreen
+/// (or borderless fullscreen) app is in the foreground, or manually with Ctrl+Shift+O.
+/// Exclusive-fullscreen D3D games draw over every window, so the overlay is only visible in borderless mode.
+/// While visible it can be moved with Ctrl+Shift+Alt+arrows (those hotkeys exist only while it is shown).
+/// </summary>
+public sealed class OverlayManager : IDisposable
+{
+    internal static readonly HashSet<string> NotGames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "explorer", "chrome", "msedge", "firefox", "opera", "brave", "vivaldi", "vlc", "mpc-hc64", "mpc-be64",
+        "PotPlayerMini64", "Video.UI", "Microsoft.Media.Player", "POWERPNT", "AlienHelper", "ApplicationFrameHost",
+        "ShellExperienceHost", "SearchHost", "StartMenuExperienceHost", "LockApp",
+    };
+
+    public const int StyleCount = 4;
+
+    readonly Controller _c;
+    readonly SensorMonitor _mon;
+    readonly FrameMonitor _frames = new();
+    readonly System.Windows.Forms.Timer _detect = new() { Interval = 2000 };
+    readonly List<HotKey> _moveKeys = new();
+    OverlayForm? _form;
+    bool _manual;        // user forced it on with the hotkey / menu
+    bool _auto;          // currently shown because a game is detected
+
+    public bool Visible => _form is { Visible: true };
+    public event Action? Changed;
+
+    public OverlayManager(Controller c, SensorMonitor mon)
+    {
+        _c = c; _mon = mon;
+        _detect.Tick += (_, _) => Detect();
+        _detect.Start();
+    }
+
+    public bool Auto
+    {
+        get => _c.S.OverlayAuto;
+        set { _c.S.OverlayAuto = value; _c.S.Save(); if (!value && _auto) { _auto = false; Apply(); } Changed?.Invoke(); }
+    }
+
+    public int Style
+    {
+        get => Math.Clamp(_c.S.OverlayStyle, 0, StyleCount - 1);
+        set
+        {
+            _c.S.OverlayStyle = Math.Clamp(value, 0, StyleCount - 1); _c.S.Save();
+            if (_form != null) _form.Style = Style;
+            Changed?.Invoke();
+        }
+    }
+
+    public void Toggle() { _manual = !Visible; if (!_manual) _auto = false; Apply(); }
+
+    /// <summary>Display mode: 0 off, 1 always on, 2 only while a game is in front.</summary>
+    public int Mode
+    {
+        get => _manual ? 1 : Auto ? 2 : 0;
+        set
+        {
+            _manual = value == 1;
+            _c.S.OverlayAuto = value == 2;
+            _c.S.Save();
+            _auto = value == 2 && FullscreenGameInFront();
+            Apply();
+            Changed?.Invoke();
+        }
+    }
+
+    void Detect()
+    {
+        bool game = Auto && FullscreenGameInFront();
+        if (game != _auto) { _auto = game; Apply(); }
+        else if (Visible) _form!.KeepOnTop();
+    }
+
+    void Apply()
+    {
+        bool show = _manual || _auto;
+        if (show && !Visible)
+        {
+            _form ??= new OverlayForm(_c, _mon, _frames) { Style = Style };
+            _frames.Start();
+            _form.Reposition();
+            _form.ShowNoActivate();
+            _mon.Want(this, Need.Mode | Need.Fans | Need.Cpu | Need.Gpu);
+            RegisterMoveKeys();
+        }
+        else if (!show && Visible)
+        {
+            _form!.Hide();
+            _frames.Stop();
+            _mon.Want(this, Need.None);
+            UnregisterMoveKeys();
+        }
+        Changed?.Invoke();
+    }
+
+    void RegisterMoveKeys()
+    {
+        if (_moveKeys.Count > 0) return;
+        int step = S(16);
+        const uint mods = HotKey.Ctrl | HotKey.Shift | HotKey.Alt;   // auto-repeat on: hold to keep moving
+        _moveKeys.Add(new HotKey(mods, Keys.Left, () => _form?.Nudge(-step, 0)));
+        _moveKeys.Add(new HotKey(mods, Keys.Right, () => _form?.Nudge(step, 0)));
+        _moveKeys.Add(new HotKey(mods, Keys.Up, () => _form?.Nudge(0, -step)));
+        _moveKeys.Add(new HotKey(mods, Keys.Down, () => _form?.Nudge(0, step)));
+    }
+
+    void UnregisterMoveKeys()
+    {
+        foreach (var k in _moveKeys) k.Dispose();
+        _moveKeys.Clear();
+    }
+
+    public void SetCorner(int corner)
+    {
+        _c.S.OverlayCorner = corner;
+        _c.S.OverlayX = _c.S.OverlayY = null;   // a corner replaces a hand-placed position
+        _c.S.Save();
+        _form?.Reposition();
+        Changed?.Invoke();
+    }
+
+    internal static bool FullscreenGameInFront()
+    {
+        var hwnd = GetForegroundWindow();
+        if (hwnd == IntPtr.Zero) return false;
+        var cls = new StringBuilder(64);
+        GetClassName(hwnd, cls, cls.Capacity);
+        if (cls.ToString() is "Progman" or "WorkerW" or "Shell_TrayWnd") return false;
+        if (!GetWindowRect(hwnd, out var wr)) return false;
+        var mi = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+        if (!GetMonitorInfo(MonitorFromWindow(hwnd, 2), ref mi)) return false;
+        var m = mi.rcMonitor;
+        bool covers = wr.Left <= m.Left && wr.Top <= m.Top && wr.Right >= m.Right && wr.Bottom >= m.Bottom;
+        if (!covers) return false;
+        GetWindowThreadProcessId(hwnd, out uint pid);
+        try
+        {
+            using var p = Process.GetProcessById((int)pid);
+            return !NotGames.Contains(p.ProcessName);
+        }
+        catch { return false; }
+    }
+
+    public void Dispose()
+    {
+        UnregisterMoveKeys();
+        _detect.Dispose();
+        _frames.Dispose();
+        _form?.Dispose();
+    }
+
+    [StructLayout(LayoutKind.Sequential)] struct RECT { public int Left, Top, Right, Bottom; }
+    [StructLayout(LayoutKind.Sequential)] struct MONITORINFO { public int cbSize; public RECT rcMonitor, rcWork; public uint dwFlags; }
+    [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] static extern IntPtr MonitorFromWindow(IntPtr h, uint flags);
+    [DllImport("user32.dll")] static extern bool GetMonitorInfo(IntPtr m, ref MONITORINFO mi);
+    [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr h, StringBuilder s, int max);
+}
+
+public enum OvIcon { None, Fps, Frame, Cpu, Gpu, Power, Vram, Ram, Fan, Mode }
+
+/// <summary>
+/// The overlay window. Styles: 0 full (rows with graphs), 1 minimal column, 2 horizontal bar with graphs,
+/// 3 minimal horizontal strip with drawn icons instead of words.
+/// </summary>
+public sealed class OverlayForm : Form
+{
+    static int Cap => SensorMonitor.Samples(120);   // points per sensor sparkline: the last 2 min
+    const int FrameCap = 180;      // frame-time samples shown
+
+    sealed class Row
+    {
+        public string Label = "", Value = "", Extra = "", Compact = "";
+        public string? StripText;      // icon strip text when the icon alone is ambiguous (two power bolts)
+        public OvIcon Icon;
+        public Color Color = Fg;
+        public List<float>? History;
+        public float Min, Max;
+        public bool Bars;          // frame-time style graph
+        public bool Big;
+        public bool Essential = true;   // shown in the minimal styles
+    }
+
+    readonly Controller _c;
+    readonly SensorMonitor _mon;
+    readonly FrameMonitor _frames;
+    readonly System.Windows.Forms.Timer _fast = new() { Interval = 500 };
+
+    readonly List<float> _fps = new(), _cpu = new(), _gpu = new(), _cpuPwr = new(), _gpuPwr = new(), _vram = new(), _ram = new();
+    List<float> _frameTimes = new();
+    FrameMonitor.Stats? _stats;
+    readonly List<Row> _rows = new();
+    string _proc = "";
+    bool _game;   // a full-screen game is in front: frame rate rows and the process name are shown
+
+    // fonts are created once; the overlay repaints twice a second
+    static readonly Font HeaderFont = Theme.Font(8f), LabelFont = Semibold(8f), ValueFont = Semibold(10f),
+        BigFont = Semibold(14f), ExtraFont = Theme.Font(8.5f), BarValueFont = Semibold(11f), BarBigFont = Semibold(13f);
+
+    int _style;
+    public int Style
+    {
+        get => _style;
+        set { _style = value; Rebuild(); Reposition(); }
+    }
+
+    public OverlayForm(Controller c, SensorMonitor mon, FrameMonitor frames)
+    {
+        _c = c; _mon = mon; _frames = frames;
+        FormBorderStyle = FormBorderStyle.None;
+        ShowInTaskbar = false;
+        TopMost = true;
+        BackColor = Color.FromArgb(10, 12, 16);
+        Opacity = 0.88;
+        DoubleBuffered = true;
+        StartPosition = FormStartPosition.Manual;
+        Size = new Size(S(270), S(300));
+        _mon.Updated += OnSensors;
+        _fast.Tick += (_, _) => OnFrames();
+        VisibleChanged += (_, _) => { if (Visible) _fast.Start(); else _fast.Stop(); };
+        FormClosed += (_, _) => { _mon.Updated -= OnSensors; _fast.Dispose(); };
+        OnSensors();
+    }
+
+    protected override bool ShowWithoutActivation => true;
+
+    protected override CreateParams CreateParams
+    {
+        get
+        {
+            var cp = base.CreateParams;
+            // layered + transparent (click-through) + toolwindow (no alt-tab) + noactivate + topmost
+            cp.ExStyle |= 0x80000 | 0x20 | 0x80 | 0x08000000 | 0x8;
+            return cp;
+        }
+    }
+
+    public void ShowNoActivate()
+    {
+        if (!IsHandleCreated) CreateHandle();
+        ShowWindow(Handle, 4); // SW_SHOWNOACTIVATE
+        Visible = true;
+        KeepOnTop();
+    }
+
+    public void KeepOnTop() => SetWindowPos(Handle, new IntPtr(-1), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010); // NOSIZE|NOMOVE|NOACTIVATE
+
+    /// <summary>Hand-placed position if the user moved it, otherwise the chosen corner.</summary>
+    public void Reposition()
+    {
+        var b = Screen.PrimaryScreen!.Bounds;
+        if (_c.S.OverlayX is int x && _c.S.OverlayY is int y)
+        {
+            Location = new Point(Math.Clamp(x, b.Left, b.Right - Width), Math.Clamp(y, b.Top, b.Bottom - Height));
+            return;
+        }
+        int m = S(12);
+        Location = _c.S.OverlayCorner switch
+        {
+            1 => new Point(b.Right - Width - m, b.Top + m),
+            2 => new Point(b.Left + m, b.Bottom - Height - m),
+            3 => new Point(b.Right - Width - m, b.Bottom - Height - m),
+            _ => new Point(b.Left + m, b.Top + m),
+        };
+    }
+
+    public void Nudge(int dx, int dy)
+    {
+        var b = Screen.PrimaryScreen!.Bounds;
+        var p = new Point(Math.Clamp(Left + dx, b.Left, b.Right - Width), Math.Clamp(Top + dy, b.Top, b.Bottom - Height));
+        Location = p;
+        _c.S.OverlayX = p.X; _c.S.OverlayY = p.Y;
+        _c.S.Save();
+    }
+
+    static void Push(List<float> l, float v, int cap = 0) { if (cap == 0) cap = Cap; l.Add(v); while (l.Count > cap) l.RemoveAt(0); }
+
+    void OnFrames()
+    {
+        _stats = _frames.Read();
+        Push(_fps, (float)(_stats?.Fps ?? 0), 120);
+        _frameTimes = _stats?.FrameTimes.ToList() ?? new List<float>();
+        _proc = _stats?.Process ?? (_frames.Error != null ? "ETW: " + _frames.Error : L.T("ov.noframes"));
+        Rebuild();
+    }
+
+    void OnSensors()
+    {
+        int Last(List<float> l) => l.Count > 0 ? (int)l[^1] : -1;
+        int cpu = Last(_mon.Cpu), gpu = Last(_mon.Gpu);
+        if (cpu > 0) Push(_cpu, cpu);
+        if (gpu > 0) Push(_gpu, gpu);
+        var g = _mon.GpuInfo;
+        if (g is { PowerW: > 0 }) Push(_gpuPwr, g.PowerW);
+        if (_mon.CpuPowerW > 0) Push(_cpuPwr, _mon.CpuPowerW);
+        if (g is { VramUsedGb: > 0 }) Push(_vram, g.VramUsedGb);
+        var (ru, _) = SystemMemory.Read();
+        if (ru > 0) Push(_ram, ru);
+        Rebuild();
+    }
+
+    void Rebuild()
+    {
+        using var dark = Theme.Use(Theme.Look.Dark);   // row colors come from the theme; the overlay is always dark
+        _rows.Clear();
+        var s = _stats;
+        var g = _mon.GpuInfo;
+        var snap = _mon.Last;
+        string W = L.T("u.w"), GB = L.T("u.gb"), MS = L.T("u.ms");
+
+        // frame rate and frame time belong to games only: browsers, players and apps such as Electron ones present
+        // frames too, so they show only while a full-screen (exclusive or borderless) non-browser window is in front
+        bool game = s != null && !OverlayManager.NotGames.Contains(s.Process) && OverlayManager.FullscreenGameInFront();
+        _game = game;
+        float fpsMax = Math.Max(60, (_fps.Count > 0 ? _fps.Max() : 60) * 1.15f);
+        string fps = s == null ? "—" : $"{s.Fps:0}";
+        if (game) _rows.Add(new Row
+        {
+            Label = "FPS", Icon = OvIcon.Fps, Value = fps, Compact = fps, Big = true,
+            Extra = s is { Low1Fps: > 0 } ? $"1% low {s.Low1Fps:0}" : "",
+            Color = Good, History = _fps, Min = 0, Max = fpsMax,
+        });
+        float ftMax = _frameTimes.Count > 0 ? Math.Max(20, _frameTimes.OrderBy(x => x).ElementAt((int)(_frameTimes.Count * 0.99)) * 1.5f) : 33;
+        string frame = s is { FrameMs: > 0 } ? $"{s.FrameMs:0.0} {MS}" : "—";
+        if (game) _rows.Add(new Row
+        {
+            Label = L.T("ov.frame"), Icon = OvIcon.Frame, Value = frame, Compact = frame,
+            Extra = _frameTimes.Count > 0 ? L.T("ov.max", $"{_frameTimes.Max():0.0} {MS}") : "",
+            Color = Accent, History = _frameTimes, Min = 0, Max = ftMax, Bars = true,
+        });
+
+        int cpu = _cpu.Count > 0 ? (int)_cpu[^1] : -1;
+        var cpuExtra = new List<string>();
+        if (_mon.CpuLoad >= 0) cpuExtra.Add($"{_mon.CpuLoad:0}%");
+        if (_mon.PClockMhz > 0) cpuExtra.Add($"{_mon.PClockMhz / 1000:0.0} {L.T("u.ghz")}");
+        string cpuT = cpu < 0 ? "—" : $"{cpu}°";
+        _rows.Add(new Row
+        {
+            Label = "CPU", Icon = OvIcon.Cpu, Value = cpuT, Extra = string.Join("  ", cpuExtra),
+            Compact = _mon.CpuLoad >= 0 ? $"{cpuT} {_mon.CpuLoad:0}%" : cpuT,
+            Color = TempColor(cpu), History = _cpu, Min = 30, Max = 100,
+        });
+
+        int gpu = _gpu.Count > 0 ? (int)_gpu[^1] : -1;
+        var gpuExtra = new List<string>();
+        if (g is { Load: >= 0 }) gpuExtra.Add($"{g.Load}%");
+        if (g is { CoreMhz: > 0 }) gpuExtra.Add($"{g.CoreMhz} {L.T("u.mhz")}");
+        string gpuT = gpu < 0 ? "—" : $"{gpu}°";
+        _rows.Add(new Row
+        {
+            Label = "GPU", Icon = OvIcon.Gpu, Value = gpuT, Extra = string.Join("  ", gpuExtra),
+            Compact = g is { Load: >= 0 } ? $"{gpuT} {g.Load}%" : gpuT,
+            Color = TempColor(gpu), History = _gpu, Min = 30, Max = 100,
+        });
+
+        if (_mon.CpuPowerW > 0)
+        {
+            string v = $"{_mon.CpuPowerW:0} {W}";
+            _rows.Add(new Row { Label = "CPU " + W, Icon = OvIcon.Power, Value = v, Compact = v, StripText = "CPU " + v, Color = Warn, History = _cpuPwr, Min = 0, Max = Math.Max(60, _cpuPwr.DefaultIfEmpty(0).Max() * 1.1f) });
+        }
+        if (g is { PowerW: > 0 })
+        {
+            string v = $"{g.PowerW:0} {W}";
+            _rows.Add(new Row { Label = "GPU " + W, Icon = OvIcon.Power, Value = v, Compact = v, StripText = "GPU " + v, Color = Hex("#FFD27A"), History = _gpuPwr, Min = 0, Max = Math.Max(60, _gpuPwr.DefaultIfEmpty(0).Max() * 1.1f) });
+        }
+        if (g is { VramTotalGb: > 0 })
+            _rows.Add(new Row { Label = "VRAM", Icon = OvIcon.Vram, Value = $"{g.VramUsedGb:0.0} / {g.VramTotalGb:0} {GB}" + (g.MemTemp > 0 ? $" · {g.MemTemp}°" : ""), Compact = $"{g.VramUsedGb:0.0} {GB}", Color = Hex("#9B7BFF"), History = _vram, Min = 0, Max = g.VramTotalGb });
+        var (ru, rt) = SystemMemory.Read();
+        if (rt > 0)
+            _rows.Add(new Row { Label = "RAM", Icon = OvIcon.Ram, Value = $"{ru:0.0} / {rt:0} {GB}", Compact = $"{ru:0.0} {GB}", Color = Hex("#62D2FF"), History = _ram, Min = 0, Max = rt });
+        if (snap != null)
+        {
+            int maxRpm = snap.Fans.Select(f => f.rpm).DefaultIfEmpty(-1).Max();
+            _rows.Add(new Row
+            {
+                Label = "FAN", Icon = OvIcon.Fan, Essential = false,
+                Value = string.Join("  ", snap.Fans.Select(f => f.rpm < 0 ? "—" : $"{f.rpm / 100 / 10.0:0.0}{L.T("u.k")}")),
+                Compact = maxRpm < 0 ? "—" : $"{maxRpm / 100 / 10.0:0.0}{L.T("u.k")}",
+            });
+            var mode = _c.CurrentModeName(snap.Profile);
+            _rows.Add(new Row
+            {
+                Label = "MODE", Icon = OvIcon.Mode, Value = mode, Compact = mode, Essential = false,
+                Color = _c.S.FanCurve ? Hex("#9B7BFF") : snap.Profile == Hardware.Awcc.ProfileGMode ? Warm : Accent,
+            });
+        }
+
+        var size = _style switch
+        {
+            1 => MeasureMiniColumn(),
+            2 => MeasureBar(),
+            3 => MeasureIconStrip(),
+            _ => new Size(S(270), S(30) + _rows.Sum(RowHeight) + S(6)),
+        };
+        if (Size != size)
+        {
+            Size = size;
+            Reposition();
+        }
+        Invalidate();
+    }
+
+    IEnumerable<Row> ShownRows => _style is 1 or 3 ? _rows.Where(r => r.Essential) : _rows;
+
+    int RowHeight(Row r) => r.History != null ? S(r.Big ? 46 : 40) : S(21);
+
+    // ---------------- measuring ----------------
+
+    Size MeasureMiniColumn()
+    {
+        int labelW = ShownRows.Max(r => TextRenderer.MeasureText(r.Label, LabelFont).Width);
+        int valueW = ShownRows.Max(r => TextRenderer.MeasureText(r.Compact, ValueFont).Width);
+        return new Size(S(12) + labelW + S(10) + valueW + S(12), S(8) + ShownRows.Count() * S(20) + S(6));
+    }
+
+    int SegmentWidth(Row r)
+    {
+        int w = Math.Max(TextRenderer.MeasureText(r.Label, LabelFont).Width, TextRenderer.MeasureText(r.Value, r.Big ? BarBigFont : BarValueFont).Width);
+        if (r.Extra.Length > 0) w = Math.Max(w, TextRenderer.MeasureText(r.Extra, HeaderFont).Width);
+        return Math.Max(S(64), w + S(4));
+    }
+
+    Size MeasureBar() => new(S(10) + _rows.Sum(r => SegmentWidth(r) + S(12)) + S(2), S(86));
+
+    int StripItemWidth(Row r) => S(18) + S(4) + TextRenderer.MeasureText(r.StripText ?? r.Compact, ValueFont).Width;
+
+    Size MeasureIconStrip() => new(S(10) + ShownRows.Sum(r => StripItemWidth(r) + S(12)) - S(12) + S(10), S(30));
+
+    // ---------------- painting ----------------
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        using var dark = Theme.Use(Theme.Look.Dark);   // over games the overlay stays dark whatever the app theme
+        var g = e.Graphics;
+        Smooth(g);
+        switch (_style)
+        {
+            case 1: PaintMiniColumn(g); break;
+            case 2: PaintBar(g); break;
+            case 3: PaintIconStrip(g); break;
+            default: PaintFull(g); break;
+        }
+    }
+
+    void PaintFull(Graphics g)
+    {
+        if (_game) TextRenderer.DrawText(g, _proc, HeaderFont, new Rectangle(S(12), S(8), Width - S(24), S(16)), Muted, TextFormatFlags.EndEllipsis);
+        int y = S(28);
+        int left = S(12), right = Width - S(12), valueX = S(58);
+        foreach (var r in _rows)
+        {
+            var font = r.Big ? BigFont : ValueFont;
+            int vy = r.Big ? y - S(4) : y;
+            TextRenderer.DrawText(g, r.Label, LabelFont, new Point(left, y + S(2)), Muted);
+            TextRenderer.DrawText(g, r.Value, font, new Point(valueX, vy), r.Color);
+            if (r.Extra.Length > 0)
+            {
+                var sz = TextRenderer.MeasureText(r.Extra, ExtraFont);
+                TextRenderer.DrawText(g, r.Extra, ExtraFont, new Point(right - sz.Width, y + S(2)), Blend(Muted, Fg, 0.4f));
+            }
+            if (r.History != null)
+            {
+                int gy = y + S(r.Big ? 26 : 20), gh = S(14);
+                DrawGraph(g, r, new RectangleF(left, gy, right - left, gh));
+            }
+            y += RowHeight(r);
+        }
+    }
+
+    void PaintMiniColumn(Graphics g)
+    {
+        int labelW = ShownRows.Max(r => TextRenderer.MeasureText(r.Label, LabelFont).Width);
+        int y = S(8);
+        foreach (var r in ShownRows)
+        {
+            TextRenderer.DrawText(g, r.Label, LabelFont, new Point(S(12), y + S(2)), Muted);
+            TextRenderer.DrawText(g, r.Compact, ValueFont, new Point(S(12) + labelW + S(10), y), r.Color);
+            y += S(20);
+        }
+    }
+
+    void PaintBar(Graphics g)
+    {
+        int x = S(10);
+        using var sep = new Pen(Color.FromArgb(40, 255, 255, 255));
+        for (int i = 0; i < _rows.Count; i++)
+        {
+            var r = _rows[i];
+            int w = SegmentWidth(r);
+            TextRenderer.DrawText(g, r.Label, LabelFont, new Point(x, S(7)), Muted);
+            var vf = r.Big ? BarBigFont : BarValueFont;
+            TextRenderer.DrawText(g, r.Value, vf, new Point(x - S(2), r.Big ? S(19) : S(22)), r.Color);
+            if (r.Extra.Length > 0)
+                TextRenderer.DrawText(g, r.Extra, HeaderFont, new Point(x, S(45)), Blend(Muted, Fg, 0.4f));
+            if (r.History != null)
+                DrawGraph(g, r, new RectangleF(x, S(64), w, S(13)));
+            x += w + S(12);
+            if (i < _rows.Count - 1) g.DrawLine(sep, x - S(6), S(10), x - S(6), Height - S(10));
+        }
+    }
+
+    void PaintIconStrip(Graphics g)
+    {
+        int x = S(10), cy = Height / 2;
+        foreach (var r in ShownRows)
+        {
+            OverlayIcons.Draw(g, r.Icon, new RectangleF(x, cy - S(9), S(18), S(18)), r.Icon == OvIcon.Fan ? Muted : r.Color);
+            var text = r.StripText ?? r.Compact;
+            var tsz = TextRenderer.MeasureText(text, ValueFont);
+            TextRenderer.DrawText(g, text, ValueFont, new Point(x + S(22), cy - tsz.Height / 2), r.Color);
+            x += StripItemWidth(r) + S(12);
+        }
+    }
+
+    static void DrawGraph(Graphics g, Row r, RectangleF rect)
+    {
+        using (var bg = Round(rect, Sf(3)))
+        using (var b = new SolidBrush(Color.FromArgb(28, 255, 255, 255))) g.FillPath(b, bg);
+        var h = r.History!;
+        if (h.Count < 2 || r.Max <= r.Min) return;
+        int cap = r.Bars ? FrameCap : Math.Max(Cap, h.Count);
+        float Y(float v) => rect.Bottom - rect.Height * (Math.Clamp(v, r.Min, r.Max) - r.Min) / (r.Max - r.Min);
+
+        if (r.Bars)
+        {
+            // frame times as thin bars; spikes (>2x median) highlighted
+            var sorted = h.OrderBy(x => x).ToList();
+            float median = sorted[sorted.Count / 2];
+            float bw = rect.Width / cap;
+            using var ok = new SolidBrush(Color.FromArgb(200, r.Color));
+            using var spike = new SolidBrush(Warm);
+            for (int i = 0; i < h.Count; i++)
+            {
+                float x = rect.Right - bw * (h.Count - i);
+                float top = Y(h[i]);
+                g.FillRectangle(h[i] > median * 2 ? spike : ok, x, top, Math.Max(1, bw - 0.3f), rect.Bottom - top);
+            }
+            return;
+        }
+
+        var pts = LineChart.Points(h, rect.Right, rect.Width / (cap - 1), rect.Width, 0, Y);   // averaged to ~1 point per pixel
+        using var area = new GraphicsPath();
+        area.AddLines(pts);
+        area.AddLine(pts[^1], new PointF(pts[^1].X, rect.Bottom));
+        area.AddLine(new PointF(pts[^1].X, rect.Bottom), new PointF(pts[0].X, rect.Bottom));
+        area.CloseFigure();
+        using (var b = new SolidBrush(Color.FromArgb(50, r.Color))) g.FillPath(b, area);
+        using var pen = new Pen(r.Color, Sf(1.3f)) { LineJoin = LineJoin.Round };
+        g.DrawLines(pen, pts);
+    }
+
+    protected override void OnResize(EventArgs e)
+    {
+        base.OnResize(e);
+        using var p = Round(new RectangleF(0, 0, Width, Height), Sf(_style == 3 ? 8 : 10));
+        Region = new Region(p);
+    }
+
+    [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr h, int cmd);
+    [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
+}
+
+/// <summary>Small vector icons for the icon strip (no image assets, crisp at any DPI).</summary>
+public static class OverlayIcons
+{
+    public static void Draw(Graphics g, OvIcon icon, RectangleF r, Color c)
+    {
+        float s = r.Width, w = Math.Max(1.2f, s * 0.11f);
+        using var pen = new Pen(c, w) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round };
+        using var brush = new SolidBrush(c);
+        PointF P(float x, float y) => new(r.X + x * s, r.Y + y * s);
+        switch (icon)
+        {
+            case OvIcon.Fps:   // speedometer
+                g.DrawArc(pen, r.X + s * 0.1f, r.Y + s * 0.18f, s * 0.8f, s * 0.8f, 180, 180);
+                g.DrawLine(pen, P(0.5f, 0.58f), P(0.75f, 0.33f));
+                g.FillEllipse(brush, r.X + s * 0.42f, r.Y + s * 0.5f, s * 0.16f, s * 0.16f);
+                break;
+            case OvIcon.Frame: // stopwatch
+                g.DrawEllipse(pen, r.X + s * 0.14f, r.Y + s * 0.2f, s * 0.72f, s * 0.72f);
+                g.DrawLine(pen, P(0.5f, 0.56f), P(0.5f, 0.36f));
+                g.DrawLine(pen, P(0.5f, 0.56f), P(0.64f, 0.64f));
+                g.DrawLine(pen, P(0.42f, 0.08f), P(0.58f, 0.08f));
+                break;
+            case OvIcon.Cpu:   // chip with pins
+                g.DrawRectangle(pen, r.X + s * 0.24f, r.Y + s * 0.24f, s * 0.52f, s * 0.52f);
+                g.FillRectangle(brush, r.X + s * 0.38f, r.Y + s * 0.38f, s * 0.24f, s * 0.24f);
+                foreach (float t in new[] { 0.36f, 0.5f, 0.64f })
+                {
+                    g.DrawLine(pen, P(t, 0.06f), P(t, 0.2f)); g.DrawLine(pen, P(t, 0.8f), P(t, 0.94f));
+                    g.DrawLine(pen, P(0.06f, t), P(0.2f, t)); g.DrawLine(pen, P(0.8f, t), P(0.94f, t));
+                }
+                break;
+            case OvIcon.Gpu:   // graphics card with a fan
+                g.DrawRectangle(pen, r.X + s * 0.06f, r.Y + s * 0.26f, s * 0.82f, s * 0.48f);
+                g.DrawEllipse(pen, r.X + s * 0.18f, r.Y + s * 0.34f, s * 0.32f, s * 0.32f);
+                g.DrawLine(pen, P(0.62f, 0.42f), P(0.78f, 0.42f));
+                g.DrawLine(pen, P(0.62f, 0.58f), P(0.78f, 0.58f));
+                g.DrawLine(pen, P(0.2f, 0.74f), P(0.2f, 0.88f));
+                break;
+            case OvIcon.Power: // lightning bolt
+                g.FillPolygon(brush, new[] { P(0.58f, 0.04f), P(0.2f, 0.56f), P(0.46f, 0.56f), P(0.38f, 0.96f), P(0.8f, 0.4f), P(0.54f, 0.4f) });
+                break;
+            case OvIcon.Ram:   // memory stick
+            case OvIcon.Vram:
+                g.DrawRectangle(pen, r.X + s * 0.06f, r.Y + s * 0.3f, s * 0.88f, s * 0.36f);
+                for (int i = 0; i < 3; i++) g.FillRectangle(brush, r.X + s * (0.16f + i * 0.25f), r.Y + s * 0.38f, s * 0.16f, s * 0.2f);
+                for (int i = 0; i < 5; i++) g.DrawLine(pen, P(0.14f + i * 0.18f, 0.74f), P(0.14f + i * 0.18f, 0.84f));
+                if (icon == OvIcon.Vram) g.DrawLine(pen, P(0.06f, 0.14f), P(0.94f, 0.14f));
+                break;
+            case OvIcon.Fan:   // three blades around a hub
+                for (int i = 0; i < 3; i++)
+                {
+                    var st = g.Save();
+                    g.TranslateTransform(r.X + s / 2, r.Y + s / 2);
+                    g.RotateTransform(i * 120);
+                    g.FillEllipse(brush, -s * 0.12f, -s * 0.46f, s * 0.24f, s * 0.38f);
+                    g.Restore(st);
+                }
+                g.FillEllipse(brush, r.X + s * 0.38f, r.Y + s * 0.38f, s * 0.24f, s * 0.24f);
+                break;
+            case OvIcon.Mode:  // alien head
+                using (var head = new GraphicsPath())
+                {
+                    head.AddBezier(P(0.5f, 0.94f), P(0.3f, 0.86f), P(0.12f, 0.62f), P(0.14f, 0.4f));
+                    head.AddBezier(P(0.14f, 0.4f), P(0.16f, 0.14f), P(0.32f, 0.04f), P(0.5f, 0.04f));
+                    head.AddBezier(P(0.5f, 0.04f), P(0.68f, 0.04f), P(0.84f, 0.14f), P(0.86f, 0.4f));
+                    head.AddBezier(P(0.86f, 0.4f), P(0.88f, 0.62f), P(0.7f, 0.86f), P(0.5f, 0.94f));
+                    g.FillPath(brush, head);
+                }
+                using (var eye = new SolidBrush(Color.FromArgb(10, 12, 16)))
+                {
+                    g.FillEllipse(eye, r.X + s * 0.22f, r.Y + s * 0.42f, s * 0.24f, s * 0.14f);
+                    g.FillEllipse(eye, r.X + s * 0.54f, r.Y + s * 0.42f, s * 0.24f, s * 0.14f);
+                }
+                break;
+        }
+    }
+}
+
+/// <summary>Global hotkey. Several can coexist; each gets its own id.</summary>
+public sealed class HotKey : NativeWindow, IDisposable
+{
+    public const uint Alt = 0x1, Ctrl = 0x2, Shift = 0x4, NoRepeat = 0x4000;
+
+    static int _nextId = 0xA1E;
+    readonly Action _action;
+    readonly int _id;
+
+    /// <summary>False if Windows refused the combination (another app already uses it).</summary>
+    public bool Registered { get; }
+
+    public HotKey(uint mods, Keys key, Action action)
+    {
+        _action = action;
+        _id = Interlocked.Increment(ref _nextId);
+        CreateHandle(new CreateParams());
+        Registered = RegisterHotKey(Handle, _id, mods, (uint)key);
+    }
+
+    /// <summary>Registers a combination stored as Keys (key | Control | Shift | Alt); null for 0 (none).</summary>
+    public static HotKey? FromCombo(int combo, Action action)
+    {
+        var k = (Keys)combo;
+        if ((k & Keys.KeyCode) == Keys.None) return null;
+        uint mods = NoRepeat;
+        if (k.HasFlag(Keys.Control)) mods |= Ctrl;
+        if (k.HasFlag(Keys.Shift)) mods |= Shift;
+        if (k.HasFlag(Keys.Alt)) mods |= Alt;
+        return new HotKey(mods, k & Keys.KeyCode, action);
+    }
+
+    /// <summary>"Ctrl+Shift+O" style text; empty for none.</summary>
+    public static string Describe(int combo)
+    {
+        var k = (Keys)combo;
+        var key = k & Keys.KeyCode;
+        if (key == Keys.None) return "";
+        var parts = new List<string>();
+        if (k.HasFlag(Keys.Control)) parts.Add("Ctrl");
+        if (k.HasFlag(Keys.Shift)) parts.Add("Shift");
+        if (k.HasFlag(Keys.Alt)) parts.Add("Alt");
+        parts.Add(key switch
+        {
+            >= Keys.D0 and <= Keys.D9 => ((char)('0' + (key - Keys.D0))).ToString(),
+            >= Keys.NumPad0 and <= Keys.NumPad9 => "Num " + (key - Keys.NumPad0),
+            Keys.Oemtilde => "`", Keys.OemMinus => "-", Keys.Oemplus => "=", Keys.OemOpenBrackets => "[",
+            Keys.OemCloseBrackets => "]", Keys.OemPipe => "\\", Keys.OemSemicolon => ";", Keys.OemQuotes => "'",
+            Keys.Oemcomma => ",", Keys.OemPeriod => ".", Keys.OemQuestion => "/",
+            Keys.Next => "PgDn", Keys.Prior => "PgUp", Keys.Back => "Backspace", Keys.Return => "Enter",
+            _ => key.ToString(),
+        });
+        return string.Join("+", parts);
+    }
+
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == 0x0312 && m.WParam == (IntPtr)_id) _action();
+        base.WndProc(ref m);
+    }
+
+    public void Dispose() { UnregisterHotKey(Handle, _id); DestroyHandle(); }
+
+    [DllImport("user32.dll")] static extern bool RegisterHotKey(IntPtr h, int id, uint mods, uint vk);
+    [DllImport("user32.dll")] static extern bool UnregisterHotKey(IntPtr h, int id);
+}

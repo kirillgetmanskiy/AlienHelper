@@ -1,0 +1,60 @@
+NOMBRE
+Alien Helper
+
+DESCRIPCIÓN BREVE
+Una alternativa ligera a Alienware Command Center para portátiles Dell Alienware compatibles: modos de energía, ventiladores, iluminación y monitorización en una ventana pequeña.
+
+DESCRIPCIÓN
+Alien Helper es una aplicación compacta para controlar portátiles Dell Alienware. Una ventana y un icono en la bandeja, sin servicios ni agentes en segundo plano propios.
+
+La aplicación está pensada solo para portátiles Dell Alienware compatibles. Probada en el Alienware 16 Area-51 (AA16250). Debería funcionar en portátiles Alienware con Alienware Command Center de 2020 en adelante (m15/m17 R3–R5, x14/x15/x17, m16/m18, Alienware 16/18 Area-51, 16 Aurora / 16X Aurora). En otros equipos los modos y el control de ventiladores no están disponibles.
+
+Modos de energía
+• Balanced, Balanced Performance, Cool, Quiet, Performance, Alien Mode: la lista procede del firmware del portátil.
+• Modo Custom: los ventiladores de CPU y GPU siguen sus propias curvas temperatura → velocidad, con aceleración suave.
+• Perfiles de curvas predefinidos (Silencioso, Equilibrado, Rendimiento, Refrigeración máxima) y propios.
+• Overclock en modo Custom: overclock prudente de la GPU NVIDIA que después restaura las frecuencias anteriores.
+• Atajos de teclado para cambiar de modo, con aviso en pantalla.
+
+Ventiladores
+• Velocidad de cada ventilador en tiempo real.
+• Impulso de ventiladores con un solo control o por separado para CPU y GPU.
+
+Monitorización
+• CPU, GPU, VRAM, RAM, SSD, red y consumo del portátil.
+• Temperatura de cada núcleo de la CPU y de la memoria de vídeo (si hay sensores).
+• Gráficos de los últimos 5 minutos y superposición en juegos con FPS.
+
+Iluminación
+• Color y brillo del teclado y del chasis.
+• Editor de iluminación por tecla con plantillas y animaciones (fuego, océano, arcoíris).
+
+Además
+• Temas oscuro, claro y sobrio, y modo «solo números».
+• 6 idiomas: español, inglés, ruso, francés, japonés y chino.
+• Inicio con Windows.
+
+Para controlar los modos y los ventiladores se necesitan permisos de administrador: el firmware del portátil solo los ofrece a administradores.
+
+Alien Helper es un proyecto independiente, sin relación con Dell Technologies Inc. ni respaldado o patrocinado por ella. Alienware, AlienFX, Alienware Command Center y Area-51 son marcas de Dell Inc. y solo se mencionan para identificar el hardware compatible. Cambiar los modos, los ventiladores o hacer overclock es bajo tu responsabilidad.
+
+CARACTERÍSTICAS (una por línea)
+Modos de energía y Alien Mode con un clic
+Modo Custom con tus curvas de ventiladores de CPU y GPU
+Perfiles de curvas predefinidos y propios
+Overclock de GPU NVIDIA en modo Custom
+Impulso de todos los ventiladores o separado CPU / GPU
+Monitorización de CPU, GPU, memoria, SSD, red y consumo
+Temperatura por núcleo y de la memoria de vídeo
+Gráficos de 5 minutos y superposición de FPS en juegos
+Iluminación por tecla, plantillas y animaciones
+Temas oscuro, claro y sobrio, 6 idiomas
+
+TÉRMINOS DE BÚSQUEDA (hasta 7)
+Alienware
+ventiladores portátil
+Alien Mode
+iluminación teclado
+temperatura
+Command Center
+overclock GPU

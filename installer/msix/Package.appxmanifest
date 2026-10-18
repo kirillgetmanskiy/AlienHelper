@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MSIX manifest; build with installer\build-msix.ps1 ($VERSION$ comes from src\AlienHelper\AlienHelper.csproj).
+     For the Microsoft Store, replace Identity Name/Publisher and PublisherDisplayName with the values
+     Partner Center shows under Product identity. -->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap3 desktop rescap">
+
+  <Identity Name="35916LobsterSoft.AlienHelper" Publisher="CN=4F657209-00E8-4045-8043-BF61B6723400" Version="$VERSION$" ProcessorArchitecture="x64" />
+
+  <Properties>
+    <DisplayName>Alien Helper</DisplayName>
+    <PublisherDisplayName>Lobster Soft</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <!-- allowElevation needs Windows 10 2004 (19041) -->
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="en-us" />
+    <Resource Language="ru-ru" />
+    <Resource Language="fr-fr" />
+    <Resource Language="es-es" />
+    <Resource Language="ja-jp" />
+    <Resource Language="zh-cn" />
+  </Resources>
+
+  <Applications>
+    <Application Id="AlienHelper" Executable="AlienHelper.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements DisplayName="Alien Helper"
+        Description="Lightweight Alienware Command Center replacement: power modes, fans, lighting, monitoring."
+        BackgroundColor="transparent" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png" />
+      <Extensions>
+        <!-- stable path %LOCALAPPDATA%\Microsoft\WindowsApps\AlienHelper.exe for the scheduled tasks -->
+        <uap3:Extension Category="windows.appExecutionAlias" Executable="AlienHelper.exe" EntryPoint="Windows.FullTrustApplication">
+          <uap3:AppExecutionAlias>
+            <desktop:ExecutionAlias Alias="AlienHelper.exe" />
+          </uap3:AppExecutionAlias>
+        </uap3:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+    <!-- hardware access (WMI, HID, ETW) needs admin; lets the app relaunch itself elevated -->
+    <rescap:Capability Name="allowElevation" />
+  </Capabilities>
+</Package>

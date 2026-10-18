@@ -1,0 +1,108 @@
+AlienHelper — third-party notices
+==================================
+
+AlienHelper is an independent project. It is not affiliated with, endorsed by, or sponsored by
+Dell Technologies Inc. Alienware, AlienFX, Alienware Command Center and Area-51 are trademarks of
+Dell Inc. or its subsidiaries; they are used only to describe the hardware this app works with.
+NVIDIA is a trademark of NVIDIA Corporation. Intel is a trademark of Intel Corporation.
+Windows is a trademark of the Microsoft group of companies.
+
+This product includes or is based on the components listed below.
+
+
+1. Software included in the binary
+----------------------------------
+
+1.1 .NET 8 runtime and Windows Desktop runtime (self-contained in AlienHelper.exe)
+    Copyright (c) .NET Foundation and Contributors. MIT License.
+    Full license and the runtime's own third-party notices:
+      licenses/dotnet-runtime-LICENSE.txt
+      licenses/dotnet-runtime-THIRD-PARTY-NOTICES.txt
+      licenses/windowsdesktop-runtime-LICENSE.txt
+
+1.2 NuGet packages (all MIT License, Copyright (c) .NET Foundation and Contributors / Microsoft Corporation)
+    - System.Management 8.0.0
+    - System.Diagnostics.PerformanceCounter 8.0.0
+    - Microsoft.Diagnostics.Tracing.TraceEvent 3.2.8 (https://github.com/microsoft/perfview)
+      Only the managed libraries are shipped; the package's native helpers
+      (msdia140.dll, KernelTraceControl.dll) are excluded from the build.
+    - Transitive dependencies: Microsoft.Diagnostics.NETCore.Client, Microsoft.Extensions.DependencyInjection(.Abstractions),
+      Microsoft.Extensions.Logging(.Abstractions), Microsoft.Extensions.Options, Microsoft.Extensions.Primitives,
+      System.CodeDom, System.Collections.Immutable, System.Configuration.ConfigurationManager,
+      System.Diagnostics.DiagnosticSource, System.Diagnostics.EventLog, System.IO.Pipelines,
+      System.Reflection.Metadata, System.Reflection.TypeExtensions, System.Runtime.CompilerServices.Unsafe,
+      System.Security.AccessControl, System.Security.Cryptography.ProtectedData, System.Security.Principal.Windows,
+      System.Text.Encodings.Web, System.Text.Json, Microsoft.Win32.Registry.
+
+    MIT License text (applies to 1.1 and 1.2):
+
+    The MIT License (MIT)
+
+    Copyright (c) .NET Foundation and Contributors
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+
+
+2. Code based on another project
+--------------------------------
+
+2.1 alienfx-tools — https://github.com/T-Troll/alienfx-tools
+    The AlienFX USB HID lighting protocol (Hardware/AlienFx.cs) and the AWCC WMI fan/power command
+    layout (Hardware/Awcc.cs) were re-implemented in C# from this project's AlienFX_SDK and alienfan-SDK.
+
+    MIT License
+
+    Copyright (c) 2020 Rik Lain
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+
+
+3. Information used as reference (no code copied)
+-------------------------------------------------
+
+3.1 Linux kernel driver drivers/platform/x86/dell/alienware-wmi-wmax.c (GPL-2.0-or-later):
+    used only to confirm interface facts (WMI method ids, operation codes, thermal profile ids).
+    No source code from it is included.
+
+3.2 Keyboard LED map for the Alienware Area-51 2025, shared by a user in
+    https://github.com/T-Troll/alienfx-tools/issues/588 — used as a starting point for the LED numbering;
+    the map for the 16" model was then determined by tests on the hardware.
+
+
+4. Original assets
+------------------
+
+The application icon (Assets/app.ico, generated by tools/make-icon.ps1) is an original drawing and is
+not the Alienware logo.

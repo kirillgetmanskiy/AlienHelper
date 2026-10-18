@@ -1,0 +1,60 @@
+NAME
+Alien Helper
+
+SHORT DESCRIPTION
+A lightweight Alienware Command Center alternative for compatible Dell Alienware laptops: power modes, fans, lighting and monitoring in one small window.
+
+DESCRIPTION
+Alien Helper is a compact control app for Dell Alienware laptops. One window and a tray icon, with no services or background agents of its own.
+
+The app is intended only for compatible Dell Alienware laptops. Tested on the Alienware 16 Area-51 (AA16250). It should work on Alienware laptops with Alienware Command Center from 2020 on (m15/m17 R3–R5, x14/x15/x17, m16/m18, Alienware 16/18 Area-51, 16 Aurora / 16X Aurora). On other computers power modes and fan control are not available.
+
+Power modes
+• Balanced, Balanced Performance, Cool, Quiet, Performance, Alien Mode — the list comes from the laptop's firmware.
+• Custom mode: CPU and GPU fans follow their own temperature → speed curves with smooth ramping.
+• Built-in curve profiles (Quiet, Balanced, Performance, Maximum cooling) and your own.
+• Overclock in Custom mode: a cautious NVIDIA GPU overclock that restores the previous clocks.
+• Hotkeys to switch modes, with an on-screen hint.
+
+Fans
+• Live speed of every fan.
+• Fan boost with one slider, or separately for CPU and GPU.
+
+Monitoring
+• CPU, GPU, VRAM, RAM, SSD, network and the laptop's power draw.
+• Temperature of every CPU core and of the video memory (where the sensors are available).
+• Charts for the last 5 minutes and an in-game overlay with FPS.
+
+Lighting
+• Keyboard and chassis color and brightness.
+• Per-key lighting editor with templates and animations (fire, ocean, rainbow).
+
+More
+• Dark, light and strict themes, and a numbers-only mode.
+• 6 languages: English, Russian, French, Spanish, Japanese, Chinese.
+• Starts with Windows.
+
+Controlling power modes and fans requires administrator rights: the laptop firmware exposes them to administrators only.
+
+Alien Helper is an independent project, not affiliated with, endorsed or sponsored by Dell Technologies Inc. Alienware, AlienFX, Alienware Command Center and Area-51 are trademarks of Dell Inc., mentioned only to identify compatible hardware. Changing modes, fans and overclocking is at your own risk.
+
+FEATURES (one per line)
+Power modes and Alien Mode in one click
+Custom mode with your own CPU and GPU fan curves
+Built-in and custom fan curve profiles
+NVIDIA GPU overclock in Custom mode
+Fan boost for all fans or separately for CPU and GPU
+Monitoring of CPU, GPU, memory, SSD, network and power draw
+Per-core CPU and video memory temperatures
+5-minute charts and an in-game FPS overlay
+Per-key lighting, templates and animations
+Dark, light and strict themes, 6 languages
+
+SEARCH TERMS (up to 7)
+Alienware
+laptop fan control
+Alien Mode
+keyboard lighting
+temperature monitor
+Command Center
+GPU overclock

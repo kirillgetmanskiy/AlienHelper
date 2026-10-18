@@ -1,0 +1,60 @@
+名称
+Alien Helper
+
+简短说明
+适用于兼容 Dell Alienware 笔记本的轻量级 Alienware Command Center 替代工具：电源模式、风扇、灯光和监控集于一个小窗口。
+
+说明
+Alien Helper 是一款用于 Dell Alienware 笔记本的小巧控制程序。只有一个窗口和托盘图标，不安装自己的服务或后台代理。
+
+本应用仅适用于兼容的 Dell Alienware 笔记本。已在 Alienware 16 Area-51（AA16250）上测试。应可用于 2020 年及以后配备 Alienware Command Center 的 Alienware 笔记本（m15/m17 R3–R5、x14/x15/x17、m16/m18、Alienware 16/18 Area-51、16 Aurora / 16X Aurora）。在其他电脑上无法使用电源模式和风扇控制。
+
+电源模式
+• Balanced、Balanced Performance、Cool、Quiet、Performance、Alien Mode——列表来自笔记本固件。
+• Custom 模式：CPU 和 GPU 风扇按各自的“温度 → 转速”曲线平滑调节。
+• 预设曲线配置（安静、均衡、性能、最大散热）和自定义配置。
+• Custom 模式下的 Overclock：谨慎的 NVIDIA GPU 超频，之后恢复原频率。
+• 切换模式的快捷键和屏幕提示。
+
+风扇
+• 实时显示每个风扇的转速。
+• 风扇增强可统一调节，也可分别调节 CPU 和 GPU。
+
+监控
+• CPU、GPU、显存、内存、SSD、网络以及笔记本整机功耗。
+• 每个 CPU 核心和显存的温度（如有传感器）。
+• 最近 5 分钟的图表和显示 FPS 的游戏叠加层。
+
+灯光
+• 键盘和机身的颜色与亮度。
+• 逐键灯光编辑器，带模板和动画（火焰、海洋、彩虹）。
+
+其他
+• 深色、浅色和简洁主题，以及“仅数字”模式。
+• 6 种语言：中文、英语、俄语、法语、西班牙语、日语。
+• 随 Windows 启动。
+
+控制电源模式和风扇需要管理员权限：笔记本固件只向管理员开放这些功能。
+
+Alien Helper 是独立项目，与 Dell Technologies Inc. 无隶属关系，未获其认可或赞助。Alienware、AlienFX、Alienware Command Center 和 Area-51 是 Dell Inc. 的商标，仅用于说明兼容的硬件。更改模式、风扇及超频的风险由您自行承担。
+
+功能（每行一项）
+一键切换电源模式和 Alien Mode
+Custom 模式：自定义 CPU 和 GPU 风扇曲线
+预设和自定义风扇曲线配置
+Custom 模式下的 NVIDIA GPU 超频
+统一或分别调节 CPU / GPU 风扇增强
+监控 CPU、GPU、内存、SSD、网络和功耗
+每核心温度和显存温度
+5 分钟图表和游戏 FPS 叠加层
+逐键灯光、模板和动画
+深色、浅色和简洁主题，6 种语言
+
+搜索词（最多 7 个）
+Alienware
+笔记本风扇控制
+Alien Mode
+键盘灯光
+温度监控
+Command Center
+显卡超频

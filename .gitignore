@@ -1,0 +1,30 @@
+# build output
+bin/
+obj/
+publish/
+publish-dev/
+installer/app/
+installer/Output/
+installer/msix/layout/
+*.msix
+*.msixupload
+*.exe
+
+# local runs and notes (test dumps, screenshots made while developing)
+local/
+shots/
+*.log
+
+# editors and OS
+.vs/
+.vscode/
+*.user
+*.suo
+Thumbs.db
+Desktop.ini
+
+# signing material never goes into the repository
+*.pfx
+*.p12
+*.snk
+*.cer

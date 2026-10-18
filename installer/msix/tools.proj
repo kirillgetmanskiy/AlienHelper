@@ -1,0 +1,9 @@
+<!-- Only pulls makeappx.exe/signtool.exe into the NuGet cache for build-msix.ps1; nothing is built. -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageDownload Include="Microsoft.Windows.SDK.BuildTools" Version="[10.0.26100.4188]" />
+  </ItemGroup>
+</Project>
