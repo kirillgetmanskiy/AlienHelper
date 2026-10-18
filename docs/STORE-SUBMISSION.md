@@ -9,7 +9,7 @@ This is not an error: both capabilities are reviewed by hand. Enter the reasons 
 **Submission options → Restricted capabilities** ("Why do you need the … capability(ies)?"), then submit for
 certification. The texts below can be pasted as they are.
 
-Package: `installer\Output\AlienHelper-0.1.1.msix` (built by `installer\build-msix.ps1`).
+Package: `installer\Output\AlienHelper-0.1.2.msix` (built by `installer\build-msix.ps1`).
 
 ## Text for Partner Center (English)
 
