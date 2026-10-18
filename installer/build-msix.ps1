@@ -36,6 +36,8 @@ Copy-Item "$PSScriptRoot\app\AlienHelper.exe" $layout
 Copy-Item "$root\src\AlienHelper\Assets\Msix\*.png" "$layout\Assets"
 Copy-Item "$root\LICENSE" "$layout\LICENSE.txt"
 Copy-Item "$root\NOTICE.md" "$layout\NOTICE.txt"
+Copy-Item "$PSScriptRoot\app\THIRD-PARTY-NOTICES.txt" $layout
+Copy-Item "$PSScriptRoot\app\licenses" $layout -Recurse
 (Get-Content "$msix\Package.appxmanifest" -Raw).Replace('$VERSION$', $msixVersion) |
     Set-Content "$layout\AppxManifest.xml" -Encoding UTF8
 
