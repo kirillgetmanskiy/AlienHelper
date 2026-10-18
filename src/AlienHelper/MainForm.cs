@@ -50,6 +50,7 @@ public sealed class MainForm : Form
         int y = S(M);
         y = BuildHeader(y);
         _cardsTop = y;
+        Controls.Add(_view);
         _cpu.Title = SystemInfo.CpuName.Length > 0 ? SystemInfo.CpuName : "CPU";
         y = BuildChip(y, "cpu", _cpu, _ram, Controller.CpuSensor, out _cpuChip);
         y = BuildChip(y, "gpu", _gpu, _vram, Controller.GpuSensor, out _gpuChip);
@@ -111,11 +112,13 @@ public sealed class MainForm : Form
     /// <summary>Main window sections in display order; the ids are what Settings hides (<see cref="Settings.HiddenCards"/>).</summary>
     readonly List<(string id, Card card)> _cards = new();
     int _cardsTop;
+    // the cards scroll under the header when they don't fit on the screen (wheel, thin thumb in the margin)
+    readonly SmoothScroll _view = new();
 
     Card AddCard(string id, Card card)
     {
         _cards.Add((id, card));
-        Controls.Add(card);
+        _view.Content.Controls.Add(card);
         return card;
     }
 
@@ -130,7 +133,7 @@ public sealed class MainForm : Form
     Chip _cpuChip = null!, _gpuChip = null!;
 
     // numbers-only mode: tiles without graphs are lower
-    static int RowH => Theme.NumbersOnly ? S(52) : S(64);
+    static int RowH => Theme.NumbersOnly ? S(56) : S(64);   // numbers: room for the RAM / VRAM second line
     static int SmallH => Theme.NumbersOnly ? S(50) : S(56);
 
     int BuildChip(int y, string id, StatTile main, StatTile mem, byte sensor, out Chip chip)
@@ -589,21 +592,22 @@ public sealed class MainForm : Form
     /// <summary>Re-stacks the cards after one of them changed height; the window keeps its bottom edge.</summary>
     void Reflow()
     {
-        int y = _cardsTop, off = AutoScrollPosition.Y;   // positions are relative to the scrolled view
+        int y = 0;
         foreach (var (id, card) in _cards)
         {
             if (_c.S.HiddenCards.Contains(id)) continue;   // card.Visible is false for every card while the window is hidden
-            card.Top = y + off;
+            card.Top = y;
             y += card.Height + S(Gap);
         }
         int bottom = Bottom;
-        // many GPUs / drives can make the window taller than the screen: cap it and scroll
-        int content = y + S(M - Gap);
-        int maxClient = Screen.FromControl(this).WorkingArea.Height - (Height - ClientSize.Height) - S(20);
-        bool scroll = content > maxClient;
-        AutoScroll = scroll;
-        AutoScrollMinSize = scroll ? new Size(0, content) : Size.Empty;
-        ClientSize = new Size(S(W) + (scroll ? SystemInformation.VerticalScrollBarWidth : 0), Math.Min(content, maxClient));
+        // more sections than the screen holds: the window stops at the screen height and the cards scroll
+        int content = Math.Max(0, y - S(Gap));
+        int maxView = Screen.FromControl(this).WorkingArea.Height - (Height - ClientSize.Height) - S(20) - _cardsTop - S(M);
+        int view = Math.Max(S(60), Math.Min(content, maxView));
+        _view.Content.Height = content;
+        _view.SetBounds(0, _cardsTop, S(W), view);
+        _view.Relayout();
+        ClientSize = new Size(S(W), _cardsTop + view + S(M));
         var wa = Screen.FromControl(this).WorkingArea;
         if (Visible) Location = new Point(Math.Min(Left, wa.Right - Width), Math.Max(wa.Top, bottom - Height));
     }

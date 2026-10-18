@@ -481,7 +481,15 @@ static class Program
             foreach (var (f, name) in forms)
             {
                 using var bmp = new Bitmap(f.Width, f.Height);
-                f.DrawToBitmap(bmp, new Rectangle(Point.Empty, f.Size));
+                // PrintWindow shows what the screen shows; DrawToBitmap paints overlapping children in the wrong order
+                bool ok;
+                using (var gr = Graphics.FromImage(bmp))
+                {
+                    var hdc = gr.GetHdc();
+                    ok = PrintWindow(f.Handle, hdc, 2);   // PW_RENDERFULLCONTENT
+                    gr.ReleaseHdc(hdc);
+                }
+                if (!ok) f.DrawToBitmap(bmp, new Rectangle(Point.Empty, f.Size));
                 bmp.Save(Path.Combine(dir, name));
             }
             var gaps = stamps.Zip(stamps.Skip(1), (x, y) => y - x).ToList();
@@ -495,6 +503,8 @@ static class Program
         Application.Run();
         return 0;
     }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")] static extern bool PrintWindow(IntPtr hwnd, IntPtr hdc, uint flags);
 
     /// <summary>Read-only dump of everything the firmware reports.</summary>
     static int Probe(string outFile)

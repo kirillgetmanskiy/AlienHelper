@@ -568,8 +568,12 @@ public sealed class StatTile : DrawnControl
         if (S(6) + vsz.Width + S(6) + ssz.Width <= Width - S(8))
             TextRenderer.DrawText(g, Sub, tf, new Point(S(6) + vsz.Width + S(4), S(17) + vsz.Height - ssz.Height - S(3)), sub);
         else
-            TextRenderer.DrawText(g, Sub, tf, new Rectangle(new Point(S(9), S(17) + vsz.Height - S(3)), new Size(Width - S(15), S(18))), sub,
+        {
+            // under the value, but never past the tile's bottom edge (narrow RAM / VRAM tiles)
+            int y = Math.Min(S(17) + vsz.Height - S(3), Height - ssz.Height - S(6));
+            TextRenderer.DrawText(g, Sub, tf, new Rectangle(new Point(S(9), y), new Size(Width - S(15), ssz.Height)), sub,
                 TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding);
+        }
     }
 
     protected override void Draw(Graphics g)
@@ -731,5 +735,119 @@ public static class Glyphs
         float d = Sf(4f);
         using var dot = new SolidBrush(Accent);
         FillDot(g, dot, new RectangleF(pts[^1].X - d / 2, pts[^1].Y - d / 2, d, d));
+    }
+}
+
+/// <summary>
+/// A scrolling area without a system scrollbar: the wheel scrolls smoothly, and a thin thumb in the right margin shows
+/// where you are (faint at rest, brighter while scrolling or under the mouse; it can be dragged).
+/// </summary>
+public sealed class SmoothScroll : Panel, IMessageFilter
+{
+    /// <summary>Put the scrolled controls here and size it to their full height, then call <see cref="Relayout"/>.</summary>
+    public Panel Content { get; } = new();
+    readonly Thumb _thumb;
+    readonly System.Windows.Forms.Timer _anim = new() { Interval = 15 };
+    float _pos, _target;
+    long _litUntil;
+
+    int Max => Math.Max(0, Content.Height - Height);
+
+    public SmoothScroll()
+    {
+        BackColor = Content.BackColor = Bg;
+        Controls.Add(Content);
+        _thumb = new Thumb(this);
+        Controls.Add(_thumb);
+        _thumb.BringToFront();
+        _anim.Tick += (_, _) => Step();
+        Application.AddMessageFilter(this);
+        Disposed += (_, _) => { Application.RemoveMessageFilter(this); _anim.Dispose(); };
+    }
+
+    protected override void OnParentBackColorChanged(EventArgs e) { BackColor = Content.BackColor = Parent!.BackColor; base.OnParentBackColorChanged(e); }
+
+    /// <summary>After the content or the view changed size: keeps the position in range and places the thumb.</summary>
+    public void Relayout()
+    {
+        _target = Math.Clamp(_target, 0, Max);
+        _pos = Math.Clamp(_pos, 0, Max);
+        Content.Width = Width;
+        Content.Top = -(int)Math.Round(_pos);
+        PlaceThumb();
+    }
+
+    protected override void OnResize(EventArgs e) { base.OnResize(e); Relayout(); }
+
+    void ScrollTo(float target, bool instant = false)
+    {
+        _target = Math.Clamp(target, 0, Max);
+        if (instant) _pos = _target;
+        _litUntil = Environment.TickCount64 + 900;
+        _anim.Start();
+        Step();
+    }
+
+    void Step()
+    {
+        _pos += (_target - _pos) * 0.28f;   // ease out: big jumps start fast and settle softly
+        if (Math.Abs(_target - _pos) < 0.5f) _pos = _target;
+        int top = -(int)Math.Round(_pos);
+        if (Content.Top != top) { Content.Top = top; Update(); }
+        PlaceThumb();
+        if (_pos == _target && Environment.TickCount64 > _litUntil && !_thumb.Lit) _anim.Stop();
+    }
+
+    void PlaceThumb()
+    {
+        _thumb.Visible = Max > 0;
+        if (Max <= 0) return;
+        int w = S(4), h = Math.Max(S(28), Height * Height / Math.Max(1, Content.Height));
+        int y = (int)((Height - h) * (_pos / Max));
+        _thumb.SetBounds(Width - S(3) - w, y, w, h);
+        _thumb.Active = Environment.TickCount64 < _litUntil;
+        _thumb.Invalidate();
+    }
+
+    public bool PreFilterMessage(ref Message m)
+    {
+        const int WM_MOUSEWHEEL = 0x020A;
+        if (m.Msg != WM_MOUSEWHEEL || !Visible || Max <= 0) return false;
+        if (!RectangleToScreen(ClientRectangle).Contains(Cursor.Position)) return false;
+        if (FromHandle(m.HWnd)?.FindForm() != FindForm()) return false;
+        int delta = (short)((m.WParam.ToInt64() >> 16) & 0xFFFF);
+        ScrollTo(_target - delta / 120f * S(90));
+        return true;
+    }
+
+    /// <summary>The thin position bar; dragging it scrolls proportionally.</summary>
+    sealed class Thumb : DrawnControl
+    {
+        readonly SmoothScroll _owner;
+        int _grabY = -1;
+        float _grabPos;
+        public bool Active { get; set; }
+        public bool Lit => Hover || _grabY >= 0;
+
+        public Thumb(SmoothScroll owner) { _owner = owner; Cursor = Cursors.Default; }
+
+        protected override void Draw(Graphics g)
+        {
+            float a = Lit ? 0.55f : Active ? 0.4f : 0.16f;
+            using var b = new SolidBrush(Blend(Theme.Bg, Fg, a));
+            using var p = Round(new RectangleF(0, 0, Width, Height), Width / 2f);
+            g.FillPath(b, p);
+        }
+
+        protected override void OnMouseDown(MouseEventArgs e) { _grabY = Cursor.Position.Y; _grabPos = _owner._pos; Capture = true; base.OnMouseDown(e); }
+        protected override void OnMouseUp(MouseEventArgs e) { _grabY = -1; Capture = false; Invalidate(); base.OnMouseUp(e); }
+
+        protected override void OnMouseMove(MouseEventArgs e)
+        {
+            base.OnMouseMove(e);
+            if (_grabY < 0) return;
+            float track = Math.Max(1, _owner.Height - Height);
+            _owner.ScrollTo(_grabPos + (Cursor.Position.Y - _grabY) * _owner.Max / track, instant: true);
+        }
     }
 }
