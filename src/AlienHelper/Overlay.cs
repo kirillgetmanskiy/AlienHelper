@@ -210,9 +210,8 @@ public sealed class OverlayForm : Form
     readonly List<Row> _rows = new();
     // widths only grow while a style is shown, so changing digits don't make items jump
     readonly Dictionary<string, int> _widths = new();
-    // optional rows stay once a sensor has reported (showing "—" on a missed read) instead of blinking out
-    readonly HashSet<string> _seen = new();
-    float _vramTotal = -1, _ramTotal = -1;
+    // the last good value of each reading: a missed driver read keeps showing it instead of a dash or a missing row
+    readonly Dictionary<string, float> _last = new();
     string _proc = "";
     bool _game;   // a full-screen game is in front: frame rate rows and the process name are shown
     long _gameUntil;   // the frame rate rows stay this long after the last game check passed (no blinking)
@@ -356,66 +355,73 @@ public sealed class OverlayForm : Form
             Wide = $"888.8 {MS}", WideExtra = L.T("ov.max", $"888.8 {MS}"),
         });
 
+        // a missed driver read shows the last good value instead of blinking to a dash
+        float cpuLoad = Keep("cpu.load", _mon.CpuLoad, _mon.CpuLoad >= 0);
+        float pclock = Keep("cpu.clock", _mon.PClockMhz, _mon.PClockMhz > 0);
         int cpu = _cpu.Count > 0 ? (int)_cpu[^1] : -1;
         var cpuExtra = new List<string>();
-        if (_mon.CpuLoad >= 0) cpuExtra.Add($"{_mon.CpuLoad:0}%");
-        if (_mon.PClockMhz > 0) cpuExtra.Add($"{_mon.PClockMhz / 1000:0.0} {L.T("u.ghz")}");
+        if (cpuLoad >= 0) cpuExtra.Add($"{cpuLoad:0}%");
+        if (pclock > 0) cpuExtra.Add($"{pclock / 1000:0.0} {L.T("u.ghz")}");
         string cpuT = cpu < 0 ? "—" : $"{cpu}°";
         _rows.Add(new Row
         {
             Label = "CPU", Icon = OvIcon.Cpu, Value = cpuT, Extra = string.Join("  ", cpuExtra),
-            Compact = _mon.CpuLoad >= 0 ? $"{cpuT} {_mon.CpuLoad:0}%" : cpuT,
+            Compact = cpuLoad >= 0 ? $"{cpuT} {cpuLoad:0}%" : cpuT,
             Color = TempColor(cpu), History = _cpu, Min = 30, Max = 100,
             Wide = "100° 100%", WideExtra = $"100%  8.8 {L.T("u.ghz")}",
         });
 
         int gpu = _gpu.Count > 0 ? (int)_gpu[^1] : -1;
+        int gpuLoad = (int)Keep("gpu.load", g?.Load ?? -1, g is { Load: >= 0 });
+        int gpuMhz = (int)Keep("gpu.mhz", g?.CoreMhz ?? -1, g is { CoreMhz: > 0 });
         var gpuExtra = new List<string>();
-        if (g is { Load: >= 0 }) gpuExtra.Add($"{g.Load}%");
-        if (g is { CoreMhz: > 0 }) gpuExtra.Add($"{g.CoreMhz} {L.T("u.mhz")}");
+        if (gpuLoad >= 0) gpuExtra.Add($"{gpuLoad}%");
+        if (gpuMhz > 0) gpuExtra.Add($"{gpuMhz} {L.T("u.mhz")}");
         string gpuT = gpu < 0 ? "—" : $"{gpu}°";
         _rows.Add(new Row
         {
             Label = "GPU", Icon = OvIcon.Gpu, Value = gpuT, Extra = string.Join("  ", gpuExtra),
-            Compact = g is { Load: >= 0 } ? $"{gpuT} {g.Load}%" : gpuT,
+            Compact = gpuLoad >= 0 ? $"{gpuT} {gpuLoad}%" : gpuT,
             Color = TempColor(gpu), History = _gpu, Min = 30, Max = 100,
             Wide = "100° 100%", WideExtra = $"100%  8888 {L.T("u.mhz")}",
         });
 
-        if (_mon.CpuPowerW > 0) _seen.Add("cpuw");
-        if (_seen.Contains("cpuw"))
+        float cpuW = Keep("cpu.w", _mon.CpuPowerW, _mon.CpuPowerW > 0);
+        if (cpuW > 0)
         {
-            string v = _mon.CpuPowerW > 0 ? $"{_mon.CpuPowerW:0} {W}" : "—";
+            string v = $"{cpuW:0} {W}";
             _rows.Add(new Row { Label = "CPU " + W, Icon = OvIcon.Power, Value = v, Compact = v, StripText = "CPU " + v, Wide = $"CPU 888 {W}", Color = Warn, History = _cpuPwr, Min = 0, Max = Math.Max(60, _cpuPwr.DefaultIfEmpty(0).Max() * 1.1f) });
         }
-        if (g is { PowerW: > 0 }) _seen.Add("gpuw");
-        if (_seen.Contains("gpuw"))
+        float gpuW = Keep("gpu.w", g?.PowerW ?? -1, g is { PowerW: > 0 });
+        if (gpuW > 0)
         {
-            string v = g is { PowerW: > 0 } ? $"{g.PowerW:0} {W}" : "—";
+            string v = $"{gpuW:0} {W}";
             _rows.Add(new Row { Label = "GPU " + W, Icon = OvIcon.Power, Value = v, Compact = v, StripText = "GPU " + v, Wide = $"GPU 888 {W}", Color = Hex("#FFD27A"), History = _gpuPwr, Min = 0, Max = Math.Max(60, _gpuPwr.DefaultIfEmpty(0).Max() * 1.1f) });
         }
-        // NVML misses the memory info now and then (e.g. while the GPU wakes up): keep the last known total
-        if (g is { VramTotalGb: > 0 }) _vramTotal = g.VramTotalGb;
-        if (_vramTotal > 0)
+        // NVML misses the memory info now and then (e.g. while the GPU wakes up)
+        float vramTotal = Keep("vram.total", g?.VramTotalGb ?? -1, g is { VramTotalGb: > 0 });
+        if (vramTotal > 0)
         {
-            bool ok = g is { VramTotalGb: > 0, VramUsedGb: >= 0 };
-            string used = ok ? $"{g!.VramUsedGb:0.0}" : "—";
-            _rows.Add(new Row { Label = "VRAM", Icon = OvIcon.Vram, Value = $"{used} / {_vramTotal:0} {GB}" + (g is { MemTemp: > 0 } ? $" · {g.MemTemp}°" : ""), Compact = ok ? $"{used} {GB}" : "—", Wide = $"88.8 / {_vramTotal:0} {GB} · 88°", Color = Hex("#9B7BFF"), History = _vram, Min = 0, Max = _vramTotal });
+            float used = Keep("vram.used", g?.VramUsedGb ?? -1, g is { VramTotalGb: > 0, VramUsedGb: >= 0 });
+            int memTemp = (int)Keep("vram.temp", g?.MemTemp ?? -1, g is { MemTemp: > 0 });
+            string u = used >= 0 ? $"{used:0.0}" : "—";
+            _rows.Add(new Row { Label = "VRAM", Icon = OvIcon.Vram, Value = $"{u} / {vramTotal:0} {GB}" + (memTemp > 0 ? $" · {memTemp}°" : ""), Compact = used >= 0 ? $"{u} {GB}" : "—", Wide = $"88.8 / {vramTotal:0} {GB} · 88°", Color = Hex("#9B7BFF"), History = _vram, Min = 0, Max = vramTotal });
         }
         var (ru, rt) = SystemMemory.Read();
-        if (rt > 0) _ramTotal = rt;
-        if (_ramTotal > 0)
+        float ramTotal = Keep("ram.total", rt, rt > 0), ramUsed = Keep("ram.used", ru, rt > 0 && ru > 0);
+        if (ramTotal > 0)
         {
-            string used = rt > 0 ? $"{ru:0.0}" : "—";
-            _rows.Add(new Row { Label = "RAM", Icon = OvIcon.Ram, Value = $"{used} / {_ramTotal:0} {GB}", Compact = rt > 0 ? $"{used} {GB}" : "—", Wide = $"888.8 / {_ramTotal:0} {GB}", Color = Hex("#62D2FF"), History = _ram, Min = 0, Max = _ramTotal });
+            string u = ramUsed > 0 ? $"{ramUsed:0.0}" : "—";
+            _rows.Add(new Row { Label = "RAM", Icon = OvIcon.Ram, Value = $"{u} / {ramTotal:0} {GB}", Compact = ramUsed > 0 ? $"{u} {GB}" : "—", Wide = $"888.8 / {ramTotal:0} {GB}", Color = Hex("#62D2FF"), History = _ram, Min = 0, Max = ramTotal });
         }
         if (snap != null)
         {
-            int maxRpm = snap.Fans.Select(f => f.rpm).DefaultIfEmpty(-1).Max();
+            var rpms = snap.Fans.Select((f, i) => (int)Keep("fan." + i, f.rpm, f.rpm >= 0)).ToList();
+            int maxRpm = rpms.DefaultIfEmpty(-1).Max();
             _rows.Add(new Row
             {
                 Label = "FAN", Icon = OvIcon.Fan, Essential = false,
-                Value = string.Join("  ", snap.Fans.Select(f => f.rpm < 0 ? "—" : $"{f.rpm / 100 / 10.0:0.0}{L.T("u.k")}")),
+                Value = string.Join("  ", rpms.Select(rpm => rpm < 0 ? "—" : $"{rpm / 100 / 10.0:0.0}{L.T("u.k")}")),
                 Compact = maxRpm < 0 ? "—" : $"{maxRpm / 100 / 10.0:0.0}{L.T("u.k")}",
                 Wide = string.Join("  ", snap.Fans.Select(_ => $"88.8{L.T("u.k")}")),
             });
@@ -440,6 +446,12 @@ public sealed class OverlayForm : Form
             Reposition();
         }
         Invalidate();
+    }
+
+    float Keep(string key, float value, bool ok)
+    {
+        if (ok) { _last[key] = value; return value; }
+        return _last.TryGetValue(key, out float v) ? v : -1;
     }
 
     IEnumerable<Row> ShownRows => _style is 1 or 3 ? _rows.Where(r => r.Essential) : _rows;
