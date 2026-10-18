@@ -455,6 +455,8 @@ static class Program
         var curveDriver = new FanCurveDriver(c, mon) { Write = (_, _) => { } };
         var curves = new FanCurveForm(c, mon, curveDriver);
         if (!lite) curves.Show();
+        var about = new AboutForm();
+        if (!lite) about.Show();
         if (!lite) foreach (var ov in overlays) ov.ShowNoActivate();   // lite: only the main window and charts, as in daily use
         // sample timing: how evenly readings arrive and what they cost (written to samples.txt)
         var stamps = new List<long>();
@@ -474,7 +476,7 @@ static class Program
         {
             t.Stop();
             Directory.CreateDirectory(dir);
-            var forms = new List<(Form, string)> { (main, "main.png"), (charts, "charts.png"), (keys, "keys.png"), (settings, "settings.png"), (curves, "curves.png") };
+            var forms = new List<(Form, string)> { (main, "main.png"), (charts, "charts.png"), (keys, "keys.png"), (settings, "settings.png"), (curves, "curves.png"), (about, "about.png") };
             forms.AddRange(overlays.Select((o, i) => ((Form)o, $"overlay{i}.png")));
             foreach (var (f, name) in forms)
             {

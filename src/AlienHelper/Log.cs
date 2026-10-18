@@ -11,6 +11,8 @@ public static class Log
     /// <summary>Program name as shown to people. Files, folders, tasks and the exe keep "AlienHelper".</summary>
     public const string AppTitle = "Alien Helper";
 
+    /// <summary>Public source code (shown in About).</summary>
+    public const string RepoUrl = "https://github.com/kirillgetmanskiy/AlienHelper";
     public const string ContactEmail = "kirill.getmanskiy@gmail.com";
 
     static readonly object _lock = new();

@@ -411,12 +411,8 @@ public sealed class TrayApp : ApplicationContext
 
     void ShowAbout()
     {
-        var v = typeof(TrayApp).Assembly.GetName().Version;
-        MessageBox.Show(_form is { IsDisposed: false, Visible: true } ? _form : null,
-            L.T("about.text", v == null ? "" : $"{v.Major}.{v.Minor}.{v.Build}") + "\n\n"
-                + L.T("about.devices", Hardware.SystemInfo.TestedModel + " (AA16250)") + "\n\n"
-                + L.T("about.contact", Log.ContactEmail),
-            L.T("about"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+        using var about = new AboutForm();
+        about.ShowDialog(_form is { IsDisposed: false, Visible: true } ? _form : null);
     }
 
     /// <summary>The previous run ended with an unhandled exception: offer to collect a report.</summary>
