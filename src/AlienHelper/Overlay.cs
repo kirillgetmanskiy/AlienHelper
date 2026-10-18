@@ -195,6 +195,8 @@ public sealed class OverlayForm : Form
         public bool Bars;          // frame-time style graph
         public bool Big;
         public bool Essential = true;   // shown in the minimal styles
+        // the widest text this row can show (all digits at their widest), so items keep one width from the start
+        public string Wide = "", WideExtra = "";
     }
 
     readonly Controller _c;
@@ -206,8 +208,14 @@ public sealed class OverlayForm : Form
     List<float> _frameTimes = new();
     FrameMonitor.Stats? _stats;
     readonly List<Row> _rows = new();
+    // widths only grow while a style is shown, so changing digits don't make items jump
+    readonly Dictionary<string, int> _widths = new();
+    // optional rows stay once a sensor has reported (showing "—" on a missed read) instead of blinking out
+    readonly HashSet<string> _seen = new();
+    float _vramTotal = -1, _ramTotal = -1;
     string _proc = "";
     bool _game;   // a full-screen game is in front: frame rate rows and the process name are shown
+    long _gameUntil;   // the frame rate rows stay this long after the last game check passed (no blinking)
 
     // fonts are created once; the overlay repaints twice a second
     static readonly Font HeaderFont = Theme.Font(8f), LabelFont = Semibold(8f), ValueFont = Semibold(10f),
@@ -217,7 +225,7 @@ public sealed class OverlayForm : Form
     public int Style
     {
         get => _style;
-        set { _style = value; Rebuild(); Reposition(); }
+        set { _style = value; _widths.Clear(); Rebuild(); Reposition(); }
     }
 
     public OverlayForm(Controller c, SensorMonitor mon, FrameMonitor frames)
@@ -327,6 +335,8 @@ public sealed class OverlayForm : Form
         // frame rate and frame time belong to games only: browsers, players and apps such as Electron ones present
         // frames too, so they show only while a full-screen (exclusive or borderless) non-browser window is in front
         bool game = s != null && !OverlayManager.NotGames.Contains(s.Process) && OverlayManager.FullscreenGameInFront();
+        if (game) _gameUntil = Environment.TickCount64 + 5000;
+        else game = Environment.TickCount64 < _gameUntil;
         _game = game;
         float fpsMax = Math.Max(60, (_fps.Count > 0 ? _fps.Max() : 60) * 1.15f);
         string fps = s == null ? "—" : $"{s.Fps:0}";
@@ -334,7 +344,7 @@ public sealed class OverlayForm : Form
         {
             Label = "FPS", Icon = OvIcon.Fps, Value = fps, Compact = fps, Big = true,
             Extra = s is { Low1Fps: > 0 } ? $"1% low {s.Low1Fps:0}" : "",
-            Color = Good, History = _fps, Min = 0, Max = fpsMax,
+            Color = Good, History = _fps, Min = 0, Max = fpsMax, Wide = "888", WideExtra = "1% low 888",
         });
         float ftMax = _frameTimes.Count > 0 ? Math.Max(20, _frameTimes.OrderBy(x => x).ElementAt((int)(_frameTimes.Count * 0.99)) * 1.5f) : 33;
         string frame = s is { FrameMs: > 0 } ? $"{s.FrameMs:0.0} {MS}" : "—";
@@ -343,6 +353,7 @@ public sealed class OverlayForm : Form
             Label = L.T("ov.frame"), Icon = OvIcon.Frame, Value = frame, Compact = frame,
             Extra = _frameTimes.Count > 0 ? L.T("ov.max", $"{_frameTimes.Max():0.0} {MS}") : "",
             Color = Accent, History = _frameTimes, Min = 0, Max = ftMax, Bars = true,
+            Wide = $"888.8 {MS}", WideExtra = L.T("ov.max", $"888.8 {MS}"),
         });
 
         int cpu = _cpu.Count > 0 ? (int)_cpu[^1] : -1;
@@ -355,6 +366,7 @@ public sealed class OverlayForm : Form
             Label = "CPU", Icon = OvIcon.Cpu, Value = cpuT, Extra = string.Join("  ", cpuExtra),
             Compact = _mon.CpuLoad >= 0 ? $"{cpuT} {_mon.CpuLoad:0}%" : cpuT,
             Color = TempColor(cpu), History = _cpu, Min = 30, Max = 100,
+            Wide = "100° 100%", WideExtra = $"100%  8.8 {L.T("u.ghz")}",
         });
 
         int gpu = _gpu.Count > 0 ? (int)_gpu[^1] : -1;
@@ -367,23 +379,36 @@ public sealed class OverlayForm : Form
             Label = "GPU", Icon = OvIcon.Gpu, Value = gpuT, Extra = string.Join("  ", gpuExtra),
             Compact = g is { Load: >= 0 } ? $"{gpuT} {g.Load}%" : gpuT,
             Color = TempColor(gpu), History = _gpu, Min = 30, Max = 100,
+            Wide = "100° 100%", WideExtra = $"100%  8888 {L.T("u.mhz")}",
         });
 
-        if (_mon.CpuPowerW > 0)
+        if (_mon.CpuPowerW > 0) _seen.Add("cpuw");
+        if (_seen.Contains("cpuw"))
         {
-            string v = $"{_mon.CpuPowerW:0} {W}";
-            _rows.Add(new Row { Label = "CPU " + W, Icon = OvIcon.Power, Value = v, Compact = v, StripText = "CPU " + v, Color = Warn, History = _cpuPwr, Min = 0, Max = Math.Max(60, _cpuPwr.DefaultIfEmpty(0).Max() * 1.1f) });
+            string v = _mon.CpuPowerW > 0 ? $"{_mon.CpuPowerW:0} {W}" : "—";
+            _rows.Add(new Row { Label = "CPU " + W, Icon = OvIcon.Power, Value = v, Compact = v, StripText = "CPU " + v, Wide = $"CPU 888 {W}", Color = Warn, History = _cpuPwr, Min = 0, Max = Math.Max(60, _cpuPwr.DefaultIfEmpty(0).Max() * 1.1f) });
         }
-        if (g is { PowerW: > 0 })
+        if (g is { PowerW: > 0 }) _seen.Add("gpuw");
+        if (_seen.Contains("gpuw"))
         {
-            string v = $"{g.PowerW:0} {W}";
-            _rows.Add(new Row { Label = "GPU " + W, Icon = OvIcon.Power, Value = v, Compact = v, StripText = "GPU " + v, Color = Hex("#FFD27A"), History = _gpuPwr, Min = 0, Max = Math.Max(60, _gpuPwr.DefaultIfEmpty(0).Max() * 1.1f) });
+            string v = g is { PowerW: > 0 } ? $"{g.PowerW:0} {W}" : "—";
+            _rows.Add(new Row { Label = "GPU " + W, Icon = OvIcon.Power, Value = v, Compact = v, StripText = "GPU " + v, Wide = $"GPU 888 {W}", Color = Hex("#FFD27A"), History = _gpuPwr, Min = 0, Max = Math.Max(60, _gpuPwr.DefaultIfEmpty(0).Max() * 1.1f) });
         }
-        if (g is { VramTotalGb: > 0 })
-            _rows.Add(new Row { Label = "VRAM", Icon = OvIcon.Vram, Value = $"{g.VramUsedGb:0.0} / {g.VramTotalGb:0} {GB}" + (g.MemTemp > 0 ? $" · {g.MemTemp}°" : ""), Compact = $"{g.VramUsedGb:0.0} {GB}", Color = Hex("#9B7BFF"), History = _vram, Min = 0, Max = g.VramTotalGb });
+        // NVML misses the memory info now and then (e.g. while the GPU wakes up): keep the last known total
+        if (g is { VramTotalGb: > 0 }) _vramTotal = g.VramTotalGb;
+        if (_vramTotal > 0)
+        {
+            bool ok = g is { VramTotalGb: > 0, VramUsedGb: >= 0 };
+            string used = ok ? $"{g!.VramUsedGb:0.0}" : "—";
+            _rows.Add(new Row { Label = "VRAM", Icon = OvIcon.Vram, Value = $"{used} / {_vramTotal:0} {GB}" + (g is { MemTemp: > 0 } ? $" · {g.MemTemp}°" : ""), Compact = ok ? $"{used} {GB}" : "—", Wide = $"88.8 / {_vramTotal:0} {GB} · 88°", Color = Hex("#9B7BFF"), History = _vram, Min = 0, Max = _vramTotal });
+        }
         var (ru, rt) = SystemMemory.Read();
-        if (rt > 0)
-            _rows.Add(new Row { Label = "RAM", Icon = OvIcon.Ram, Value = $"{ru:0.0} / {rt:0} {GB}", Compact = $"{ru:0.0} {GB}", Color = Hex("#62D2FF"), History = _ram, Min = 0, Max = rt });
+        if (rt > 0) _ramTotal = rt;
+        if (_ramTotal > 0)
+        {
+            string used = rt > 0 ? $"{ru:0.0}" : "—";
+            _rows.Add(new Row { Label = "RAM", Icon = OvIcon.Ram, Value = $"{used} / {_ramTotal:0} {GB}", Compact = rt > 0 ? $"{used} {GB}" : "—", Wide = $"888.8 / {_ramTotal:0} {GB}", Color = Hex("#62D2FF"), History = _ram, Min = 0, Max = _ramTotal });
+        }
         if (snap != null)
         {
             int maxRpm = snap.Fans.Select(f => f.rpm).DefaultIfEmpty(-1).Max();
@@ -392,6 +417,7 @@ public sealed class OverlayForm : Form
                 Label = "FAN", Icon = OvIcon.Fan, Essential = false,
                 Value = string.Join("  ", snap.Fans.Select(f => f.rpm < 0 ? "—" : $"{f.rpm / 100 / 10.0:0.0}{L.T("u.k")}")),
                 Compact = maxRpm < 0 ? "—" : $"{maxRpm / 100 / 10.0:0.0}{L.T("u.k")}",
+                Wide = string.Join("  ", snap.Fans.Select(_ => $"88.8{L.T("u.k")}")),
             });
             var mode = _c.CurrentModeName(snap.Profile);
             _rows.Add(new Row
@@ -422,23 +448,44 @@ public sealed class OverlayForm : Form
 
     // ---------------- measuring ----------------
 
+    /// <summary>The widest width seen for this key since the style was picked.</summary>
+    int Stable(string key, int w)
+    {
+        if (_widths.TryGetValue(key, out int old) && old >= w) return old;
+        _widths[key] = w;
+        return w;
+    }
+
+    int MiniLabelWidth() => Stable("mini.label", ShownRows.Max(r => TextRenderer.MeasureText(r.Label, LabelFont).Width));
+
     Size MeasureMiniColumn()
     {
-        int labelW = ShownRows.Max(r => TextRenderer.MeasureText(r.Label, LabelFont).Width);
-        int valueW = ShownRows.Max(r => TextRenderer.MeasureText(r.Compact, ValueFont).Width);
-        return new Size(S(12) + labelW + S(10) + valueW + S(12), S(8) + ShownRows.Count() * S(20) + S(6));
+        int valueW = Stable("mini.value", ShownRows.Max(r => Widest(ValueFont, r.Compact, ShortWide(r))));
+        return new Size(S(12) + MiniLabelWidth() + S(10) + valueW + S(12), S(8) + ShownRows.Count() * S(20) + S(6));
     }
 
     int SegmentWidth(Row r)
     {
-        int w = Math.Max(TextRenderer.MeasureText(r.Label, LabelFont).Width, TextRenderer.MeasureText(r.Value, r.Big ? BarBigFont : BarValueFont).Width);
-        if (r.Extra.Length > 0) w = Math.Max(w, TextRenderer.MeasureText(r.Extra, HeaderFont).Width);
-        return Math.Max(S(64), w + S(4));
+        int w = Math.Max(TextRenderer.MeasureText(r.Label, LabelFont).Width, Widest(r.Big ? BarBigFont : BarValueFont, r.Value, r.Icon == OvIcon.Power ? ShortWide(r) : r.Wide));
+        w = Math.Max(w, Widest(HeaderFont, r.Extra, r.WideExtra));
+        return Stable("bar." + r.Label, Math.Max(S(64), w + S(4)));
     }
 
     Size MeasureBar() => new(S(10) + _rows.Sum(r => SegmentWidth(r) + S(12)) + S(2), S(86));
 
-    int StripItemWidth(Row r) => S(18) + S(4) + TextRenderer.MeasureText(r.StripText ?? r.Compact, ValueFont).Width;
+    int StripItemWidth(Row r) => Stable("strip." + r.Label, S(18) + S(4) + Widest(ValueFont, r.StripText ?? r.Compact, r.StripText != null ? r.Wide : ShortWide(r)));
+
+    /// <summary>The reserve for the compact value: "88.8 GB" without the "/ 32 GB" part, one fan, no source name.</summary>
+    static string ShortWide(Row r) => r.Icon switch
+    {
+        OvIcon.Vram or OvIcon.Ram => r.Wide.Split(" / ")[0] + " " + L.T("u.gb"),
+        OvIcon.Fan => r.Wide.Split("  ")[0],
+        OvIcon.Power => r.Wide[4..],   // "CPU 888 W" without the name
+        _ => r.Wide,
+    };
+
+    static int Widest(Font f, string text, string wide) =>
+        Math.Max(text.Length > 0 ? TextRenderer.MeasureText(text, f).Width : 0, wide.Length > 0 ? TextRenderer.MeasureText(wide, f).Width : 0);
 
     Size MeasureIconStrip() => new(S(10) + ShownRows.Sum(r => StripItemWidth(r) + S(12)) - S(12) + S(10), S(30));
 
@@ -485,7 +532,7 @@ public sealed class OverlayForm : Form
 
     void PaintMiniColumn(Graphics g)
     {
-        int labelW = ShownRows.Max(r => TextRenderer.MeasureText(r.Label, LabelFont).Width);
+        int labelW = MiniLabelWidth();
         int y = S(8);
         foreach (var r in ShownRows)
         {
