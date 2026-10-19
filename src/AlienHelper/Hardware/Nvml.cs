@@ -12,6 +12,8 @@ public sealed class Nvml : IDisposable
 
     readonly IntPtr[] _devs;
     readonly uint[] _maxMw;   // highest power reading we believe, per GPU
+    readonly uint[] _maxCore, _maxMem;   // highest clocks we believe, per GPU (MHz)
+    readonly int[] _lastCore, _lastMem;   // last believable clocks: shown instead of a glitch, so nothing blinks
     /// <summary>Names of the NVIDIA GPUs, in NVML index order.</summary>
     public IReadOnlyList<string> Names { get; }
     public int Count => _devs.Length;
@@ -27,6 +29,12 @@ public sealed class Nvml : IDisposable
         // past that a reading is a glitch: right after the GPU wakes, NVML sometimes returns hundreds of watts or more
         _maxMw = devs.Select(d => nvmlDeviceGetPowerManagementLimitConstraints(d, out _, out uint max) == 0 && max > 0
             ? max + max / 2 : 400_000u).ToArray();
+        // right after a mode switch NVML now and then reports a clock no GPU runs at (8000 MHz on a 3090 MHz core): allow
+        // the rated maximum plus the largest offset the driver accepts (+1000 core, +3000 memory) and drop the rest
+        _maxCore = devs.Select(d => nvmlDeviceGetMaxClockInfo(d, 0, out uint m) == 0 && m > 0 ? m + 1000 : 5000u).ToArray();
+        _maxMem = devs.Select(d => nvmlDeviceGetMaxClockInfo(d, 2, out uint m) == 0 && m > 0 ? m + 3000 : 40000u).ToArray();
+        _lastCore = devs.Select(_ => -1).ToArray();
+        _lastMem = devs.Select(_ => -1).ToArray();
     }
 
     public static Nvml? TryOpen()
@@ -56,8 +64,8 @@ public sealed class Nvml : IDisposable
     {
         var dev = _devs[index];
         int temp = nvmlDeviceGetTemperature(dev, 0, out uint t) == 0 ? (int)t : -1;
-        int core = nvmlDeviceGetClockInfo(dev, 0, out uint c) == 0 ? (int)c : -1;
-        int mem = nvmlDeviceGetClockInfo(dev, 2, out uint m) == 0 ? (int)m : -1;
+        int core = nvmlDeviceGetClockInfo(dev, 0, out uint c) != 0 ? -1 : c <= _maxCore[index] ? _lastCore[index] = (int)c : _lastCore[index];
+        int mem = nvmlDeviceGetClockInfo(dev, 2, out uint m) != 0 ? -1 : m <= _maxMem[index] ? _lastMem[index] = (int)m : _lastMem[index];
         // a GPU waking from D3 sometimes reports nonsense (500 W to tens of kW): drop anything past its power limit
         float pw = nvmlDeviceGetPowerUsage(dev, out uint mw) == 0 && mw <= _maxMw[index] ? mw / 1000f : -1;
         int load = nvmlDeviceGetUtilizationRates(dev, out var u) == 0 ? (int)u.gpu : -1;
@@ -97,6 +105,7 @@ public sealed class Nvml : IDisposable
     [DllImport(Dll, CharSet = CharSet.Ansi)] static extern int nvmlDeviceGetName(IntPtr dev, System.Text.StringBuilder name, uint len);
     [DllImport(Dll)] static extern int nvmlDeviceGetTemperature(IntPtr dev, int sensor, out uint temp);
     [DllImport(Dll)] static extern int nvmlDeviceGetClockInfo(IntPtr dev, int type, out uint mhz);
+    [DllImport(Dll)] static extern int nvmlDeviceGetMaxClockInfo(IntPtr dev, int type, out uint mhz);
     [DllImport(Dll)] static extern int nvmlDeviceGetPowerUsage(IntPtr dev, out uint mw);
     [DllImport(Dll)] static extern int nvmlDeviceGetPowerManagementLimitConstraints(IntPtr dev, out uint minMw, out uint maxMw);
     [DllImport(Dll)] static extern int nvmlDeviceGetUtilizationRates(IntPtr dev, out Utilization u);
