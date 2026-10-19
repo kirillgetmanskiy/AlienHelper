@@ -185,36 +185,73 @@ public sealed class SensorMonitor : IDisposable
     /// <summary>Kept for callers that want a fresh reading right away (e.g. after switching the mode).</summary>
     public Task Poll() { _wake.Set(); return Task.CompletedTask; }
 
-    /// <summary>Background thread: reads the wanted sources once.</summary>
+    /// <summary>
+    /// One sensor source read on its own task. WMI (firmware, battery, disks) and performance counters have no timeout and
+    /// now and then stop answering for many seconds; a source that hangs then holds up only itself, the rest keep updating
+    /// and its last values stay on screen. A hang is logged with the source's name, and so is its recovery.
+    /// </summary>
+    sealed class Lane
+    {
+        readonly string _name;
+        Task _task = Task.CompletedTask;
+        long _since;
+        bool _stuck, _failed;
+
+        public Lane(string name) => _name = name;
+
+        /// <summary>Starts a read unless the previous one is still running; returns the started task or null.</summary>
+        public Task? Start(Action read)
+        {
+            long now = Clock.ElapsedMilliseconds;
+            if (!_task.IsCompleted)
+            {
+                if (!_stuck && now - _since > 3000) { _stuck = true; Log.Warn($"sensors: '{_name}' has not answered for {now - _since} ms"); }
+                return null;
+            }
+            if (_stuck) { _stuck = false; Log.Warn($"sensors: '{_name}' answered again after {now - _since} ms"); }
+            _since = now;
+            return _task = Task.Run(() =>
+            {
+                try { read(); _failed = false; }
+                catch (Exception ex) { if (!_failed) Log.Warn($"sensors: '{_name}' failed: {ex.Message}"); _failed = true; }
+            });
+        }
+    }
+
+    readonly Lane _firmwareLane = new("firmware (fans, temperatures, mode)"), _cpuLane = new("cpu counters and core temperatures"),
+        _cpuPowerLane = new("cpu power"), _gpuLane = new("nvidia"), _batteryLane = new("battery"), _psysLane = new("platform power"),
+        _netLane = new("network"), _disksLane = new("disks");
+    Controller.Snapshot? _snap;
+
+    /// <summary>Background thread: reads the wanted sources once, each on its own lane, and waits for them briefly.</summary>
     Controller.Snapshot? ReadSources(Need need)
     {
-        var s = need.HasFlag(Need.Fans) ? _c.Read() : need.HasFlag(Need.Mode) ? _c.ReadMode() : null;
+        var started = new List<Task>();
+        void Go(Lane lane, Action read) { if (lane.Start(read) is { } t) started.Add(t); }
+
+        if (need.HasFlag(Need.Fans)) Go(_firmwareLane, () => _snap = _c.Read());
+        else if (need.HasFlag(Need.Mode)) Go(_firmwareLane, () => _snap = _c.ReadMode());
         // Sources that are slow to open (≈50 counters, NVML, PawnIO, disk counters) open in the background, so a window
         // shows the fast ones at once and the rest join as soon as they are ready.
-        if (need.HasFlag(Need.Cpu) || need.HasFlag(Need.CoreTemps))
-        {
-            if (Ready(ref _coresInit, () => { _cores.Open(); _coresOpen = true; }) && _coresOpen)
-                try { _cores.Sample(); } catch { }
-        }
-        if (need.HasFlag(Need.CoreTemps) && Ready(ref _coreTempsInit, OpenPawnIo))
-        {
-            if (_coreTemps != null && _coresOpen)
+        bool cores = (need.HasFlag(Need.Cpu) || need.HasFlag(Need.CoreTemps)) && Ready(ref _coresInit, () => { _cores.Open(); _coresOpen = true; }) && _coresOpen;
+        bool temps = need.HasFlag(Need.CoreTemps) && Ready(ref _coreTempsInit, OpenPawnIo) && _coreTemps != null && _coresOpen;
+        if (cores || temps)
+            Go(_cpuLane, () =>
             {
+                if (cores) try { _cores.Sample(); } catch { }
+                if (!temps) return;
                 try
                 {
-                    var t = _coreTemps.Read(Environment.ProcessorCount);
+                    var t = _coreTemps!.Read(Environment.ProcessorCount);
                     foreach (var core in _cores.Cores) core.Temp = core.Index < t.Length ? t[core.Index] : -1;
                 }
                 catch { }
-            }
-        }
+            });
         if (need.HasFlag(Need.Cpu) && Ready(ref _powerInit, () =>
             {
                 try { var pc = new PerformanceCounter("Energy Meter", "Power", "RAPL_Package0_PKG"); pc.NextValue(); _cpuPower = pc; } catch { _cpuPower = null; }
-            }))
-        {
-            try { if (_cpuPower != null) CpuPowerW = _cpuPower.NextValue() / 1000f; } catch { CpuPowerW = -1; }
-        }
+            }) && _cpuPower != null)
+            Go(_cpuPowerLane, () => { try { CpuPowerW = _cpuPower.NextValue() / 1000f; } catch { CpuPowerW = -1; } });
         if (need.HasFlag(Need.Gpu) && Ready(ref _gpuInit, () =>
             {
                 _nvml = Nvml.TryOpen();
@@ -224,30 +261,33 @@ public sealed class SensorMonitor : IDisposable
                 Gpus = list;
             }))
         {
-            // NVML can take ~0.5 s when the dGPU has dozed off between reads; read the GPUs on their own so that never
-            // holds up fans, temperatures and the rest. Each sample takes the latest GPU values that are ready.
-            if (_gpuRead.IsCompleted) _gpuRead = Task.Run(ReadGpus);
+            // NVML can take ~0.5 s when the dGPU has dozed off between reads: not waited for, so that never holds up the
+            // sample. Each sample takes the latest GPU values that are ready.
+            _gpuLane.Start(ReadGpus);
         }
         if (need.HasFlag(Need.Power) && DateTime.UtcNow - _lastBattery > TimeSpan.FromMilliseconds(900))
         {
             _lastBattery = DateTime.UtcNow;   // the gauge updates about once a second
-            Battery = BatteryState.Read();
+            Go(_batteryLane, () => Battery = BatteryState.Read());
         }
-        if (need.HasFlag(Need.Power) && Ready(ref _coreTempsInit, OpenPawnIo) && _coreTemps != null) ReadPsys();
+        if (need.HasFlag(Need.Power) && Ready(ref _coreTempsInit, OpenPawnIo) && _coreTemps != null) Go(_psysLane, ReadPsys);
         if (need.HasFlag(Need.Net))
-        {
-            if (DateTime.UtcNow - _lastLinks > TimeSpan.FromSeconds(10)) { _lastLinks = DateTime.UtcNow; UpdateLinks(); }
-            foreach (var l in Links) l.Sample();
-        }
+            Go(_netLane, () =>
+            {
+                if (DateTime.UtcNow - _lastLinks > TimeSpan.FromSeconds(10)) { _lastLinks = DateTime.UtcNow; UpdateLinks(); }
+                foreach (var l in Links) l.Sample();
+            });
         if (need.HasFlag(Need.Disks) && Ready(ref _drivesInit, () => { _lastDisks = DateTime.UtcNow; UpdateDrives(); }))
-        {
-            if (DateTime.UtcNow - _lastDisks > TimeSpan.FromSeconds(30)) { _lastDisks = DateTime.UtcNow; UpdateDrives(); }
-            foreach (var d in Drives) d.SampleIo();
-        }
-        return s;
-    }
+            Go(_disksLane, () =>
+            {
+                if (DateTime.UtcNow - _lastDisks > TimeSpan.FromSeconds(30)) { _lastDisks = DateTime.UtcNow; UpdateDrives(); }
+                foreach (var d in Drives) d.SampleIo();
+            });
 
-    Task _gpuRead = Task.CompletedTask;
+        // normally every read is done in a few ms; one that hangs is left running and its last values are used
+        if (started.Count > 0) Task.WaitAll(started.ToArray(), Math.Clamp(IntervalMs * 4 / 5, 50, 800));
+        return need.HasFlag(Need.Fans) || need.HasFlag(Need.Mode) ? _snap : null;
+    }
 
     /// <summary>PawnIO with the IntelMSR module: per-core temperatures and the platform energy counter.</summary>
     void OpenPawnIo()
