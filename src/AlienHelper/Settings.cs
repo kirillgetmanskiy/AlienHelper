@@ -22,7 +22,7 @@ public sealed class Settings
     public bool GpuOcApplied { get; set; }                     // offsets changed by the app: put the originals back
     public int GpuOcBaseCore { get; set; }                     // original offsets (MHz) before the app changed them
     public int GpuOcBaseMem { get; set; }
-    public int CustomBase { get; set; } = 0xA0;                // firmware profile under Custom (default Balanced)
+    public int CustomBase { get; set; } = 0xAB;                // firmware profile under Custom (default Alien Mode)
     public string CurveProfile { get; set; } = "balanced";   // preset id or "user:<name>" the curves came from
     public List<CurveProfile> UserCurves { get; set; } = new();
     public bool FanExpert { get; set; }             // separate boost for CPU and GPU fans

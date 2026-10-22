@@ -85,6 +85,9 @@ public sealed class FanCurveForm : Form
         _baseBtn.Click += (_, _) => { BuildBaseMenu(); _baseMenu.Show(_baseBtn, new Point(0, _baseBtn.Height + S(2))); };
         Controls.Add(_baseBtn);
         UpdateBaseText();
+        var baseTip = new ToolTip { AutoPopDelay = 15000, InitialDelay = 300 };
+        baseTip.SetToolTip(baseLbl, L.T("curves.basetip"));
+        baseTip.SetToolTip(_baseBtn, L.T("curves.basetip"));
 
         // Overclock: GPU core / memory offsets added to the original ones, only while Custom runs
         int ox = _baseBtn.Right + S(24);
@@ -178,7 +181,6 @@ public sealed class FanCurveForm : Form
         _baseMenu.Items.Clear();
         foreach (var p in _c.Awcc?.Profiles ?? new List<byte>())
         {
-            if (p == Hardware.Awcc.ProfileGMode) continue;   // Alien Mode runs the fans flat out: no room for curves
             byte pp = p;
             _baseMenu.Items.Add(new ToolStripMenuItem(_c.ProfileName(p), null, (_, _) =>
             {

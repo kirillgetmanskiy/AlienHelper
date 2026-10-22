@@ -480,6 +480,7 @@ static class Program
             forms.AddRange(overlays.Select((o, i) => ((Form)o, $"overlay{i}.png")));
             foreach (var (f, name) in forms)
             {
+                if (f.IsDisposed) continue;   // a window closed while the screenshots were being taken
                 using var bmp = new Bitmap(f.Width, f.Height);
                 // PrintWindow shows what the screen shows; DrawToBitmap paints overlapping children in the wrong order
                 bool ok;

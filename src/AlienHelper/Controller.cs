@@ -98,7 +98,7 @@ public sealed class Controller : IDisposable
     void BoostForMode(int p)
     {
         _lastProfile = p;
-        if (S.FanCurve && p != Awcc.ProfileGMode) return;   // Custom: the fan curves set the boost
+        if (S.FanCurve) return;   // Custom (on any base, Alien Mode included): the fan curves set the boost
         // Alien Mode runs the fans flat out, Cool keeps them high (75 %), the other modes leave them to the BIOS curve
         int target = p == Awcc.ProfileGMode ? 100 : p == ProfileCool ? 75 : 0;
         if (S.FanBoost == target && S.FanBoostCpu == target && S.FanBoostGpu == target) return;
@@ -112,9 +112,13 @@ public sealed class Controller : IDisposable
     /// <summary>Pseudo profile id for the Custom mode in mode lists.</summary>
     public const int CustomMode = 0x100;
 
-    /// <summary>Firmware profile Custom runs on (its power limits); the fans follow the curves on top of it.</summary>
+    /// <summary>
+    /// Firmware profile Custom runs on: it sets the CPU and GPU power limits (e.g. the GPU gets 80 W in Balanced and
+    /// 175 W in Performance / Alien Mode on an RTX 5080 Laptop), the fans follow the curves on top of it.
+    /// Default Alien Mode (full power); Balanced where the firmware has no Alien Mode.
+    /// </summary>
     public byte CustomBase => Awcc != null && S.CustomBase is > 0 and < 0xFF && Awcc.Profiles.Contains((byte)S.CustomBase)
-        && S.CustomBase != Hardware.Awcc.ProfileGMode ? (byte)S.CustomBase : (byte)0xA0;
+        ? (byte)S.CustomBase : Awcc != null && Awcc.Profiles.Contains(Hardware.Awcc.ProfileGMode) ? Hardware.Awcc.ProfileGMode : (byte)0xA0;
 
     /// <summary>Raised (any thread) when Custom was entered or left.</summary>
     public event Action? CustomChanged;

@@ -64,6 +64,15 @@ public static class L
         ["curves.mine"] = new[] { "Мои", "Mine", "Les miens", "Míos", "マイ", "我的" },
         ["curves.newname"] = new[] { "Мой профиль {0}", "My profile {0}", "Mon profil {0}", "Mi perfil {0}", "マイ プロファイル {0}", "我的配置 {0}" },
         ["curves.addhint"] = new[] { "Двойной щелчок — добавить точку, правый — удалить", "Double-click adds a point, right-click removes one", "Double-clic : ajouter un point, clic droit : supprimer", "Doble clic añade un punto, clic derecho lo quita", "ダブルクリックで点を追加、右クリックで削除", "双击添加点，右键删除" },
+        ["curves.basetip"] = new[]
+        {
+            "Задаёт лимиты мощности процессора и видеокарты (производительность). Вентиляторы в Custom всегда идут по кривым.",
+            "Sets the CPU and GPU power limits (performance). In Custom the fans always follow the curves.",
+            "Fixe les limites de puissance du processeur et de la carte graphique (performances). En Custom, les ventilateurs suivent toujours les courbes.",
+            "Fija los límites de potencia del procesador y la tarjeta gráfica (rendimiento). En Custom los ventiladores siempre siguen las curvas.",
+            "CPU と GPU の電力制限 (性能) を決めます。Custom ではファンは常にカーブに従います。",
+            "设定处理器和显卡的功耗上限 (性能)。在 Custom 中风扇始终按曲线运行。",
+        },
         ["curves.base"] = new[] { "Режим прошивки под Custom", "Firmware mode under Custom", "Mode firmware sous Custom", "Modo de firmware bajo Custom", "Custom の基本モード", "Custom 的固件模式" },
         ["oc.title"] = new[] { "Разгон GPU", "GPU overclock", "Overclock GPU", "Overclock GPU", "GPU OC", "GPU 超频" },
         ["oc.mild"] = new[] { "Мягкий", "Mild", "Léger", "Suave", "控えめ", "轻度" },

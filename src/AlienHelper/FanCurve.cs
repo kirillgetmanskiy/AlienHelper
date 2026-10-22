@@ -64,7 +64,7 @@ public sealed class CurveProfile
 /// <summary>
 /// Drives the CPU and GPU fan boost from their curves while Custom is on. Temperatures are smoothed (~3 s), the boost
 /// rises up to 15 %/s and falls up to 5 %/s, so the fans ramp instead of jumping, and the firmware is written at most
-/// once a second per group (a 1 % drift only every 3 s). Alien Mode keeps its 100 %.
+/// once a second per group (a 1 % drift only every 3 s). This holds on every base mode, Alien Mode included.
 /// </summary>
 public sealed class FanCurveDriver : IDisposable
 {
@@ -118,7 +118,8 @@ public sealed class FanCurveDriver : IDisposable
         var snap = _mon.Last;
         if (snap == null || snap.Fans.Count == 0) return;   // a mode-only sample carries no temperatures
         int Temp(string name) => snap.Temps.FirstOrDefault(t => t.s.Name == name).temp;
-        Feed(Temp("CPU"), Temp("GPU"), SensorMonitor.Clock.ElapsedMilliseconds, snap.Profile == Hardware.Awcc.ProfileGMode);
+        // Alien Mode as Custom's base runs on the curves too (alien = false); only outside Custom it means 100 %
+        Feed(Temp("CPU"), Temp("GPU"), SensorMonitor.Clock.ElapsedMilliseconds, alien: false);
     }
 
     /// <summary>One step of both groups for these temperatures at time <paramref name="now"/> (ms).</summary>
