@@ -1,6 +1,6 @@
 # Microsoft Store 16:9 "Super hero art": store-listing\hero\SuperHero-3840x2160.png and -1920x1080.png.
 # No text (the Store overlays the title and buttons, bottom left), so one image serves every language.
-# Drawn from vectors: the alien head of the app icon on a dark gradient, with faint chart lines behind it.
+# Drawn from vectors: the app icon ("AH" monogram tile) on a dark gradient, with faint chart lines behind it.
 Add-Type -AssemblyName System.Drawing
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
@@ -20,7 +20,7 @@ function Draw-Hero([int]$W, [int]$H) {
     $bg = New-Object System.Drawing.Drawing2D.LinearGradientBrush $rect, (C '#05070B'), (C '#0E1C2C'), 20
     $g.FillRectangle($bg, $rect)
 
-    # glow behind the head (right)
+    # glow behind the icon (right)
     $cx = 2720 * $k; $cy = 1060 * $k
     # one smooth radial gradient (stacked circles would show rings)
     $rad = 1600 * $k
@@ -54,7 +54,7 @@ function Draw-Hero([int]$W, [int]$H) {
         $g.DrawLines($pen, $pts.ToArray())
     }
 
-    # fan curve: a smooth rising line with points, lower right (behind the head's shoulder)
+    # fan curve: a smooth rising line with points, lower right (behind the icon)
     $curve = @(@(1700, 1900), @(2050, 1880), @(2350, 1760), @(2650, 1560), @(2950, 1300), @(3300, 1080), @(3840, 1080))
     $cp = $curve | ForEach-Object { New-Object System.Drawing.PointF ([float]($_[0] * $k)), ([float]($_[1] * $k)) }
     $cpen = New-Object System.Drawing.Pen (C '#1FB6FF' 90), ([float](7 * $k))
@@ -62,33 +62,37 @@ function Draw-Hero([int]$W, [int]$H) {
     $dot = New-Object System.Drawing.SolidBrush (C '#BFEFFF' 120)
     foreach ($p in $cp[1..5]) { $d = 22 * $k; $g.FillEllipse($dot, [float]($p.X - $d / 2), [float]($p.Y - $d / 2), [float]$d, [float]$d) }
 
-    # the alien head (same shape as the app icon), centred at ($cx, $cy)
-    $s = 1500 * $k
+    # the app icon: the "AH" monogram on a dark rounded tile (same as tools\make-icon.ps1), centred at ($cx, $cy)
+    $s = 1100 * $k
     $ox = $cx - $s / 2; $oy = $cy - $s / 2
-    function P([double]$x, [double]$y) { New-Object System.Drawing.PointF ([float]($ox + $x * $s)), ([float]($oy + $y * $s)) }
-    $head = New-Object System.Drawing.Drawing2D.GraphicsPath
-    $head.AddBezier((P 0.50 0.90), (P 0.31 0.84), (P 0.16 0.62), (P 0.17 0.42))
-    $head.AddBezier((P 0.17 0.42), (P 0.18 0.20), (P 0.33 0.10), (P 0.50 0.10))
-    $head.AddBezier((P 0.50 0.10), (P 0.67 0.10), (P 0.82 0.20), (P 0.83 0.42))
-    $head.AddBezier((P 0.83 0.42), (P 0.84 0.62), (P 0.69 0.84), (P 0.50 0.90))
-    $head.CloseFigure()
+    $r = $s * 0.22
+    $tile = New-Object System.Drawing.Drawing2D.GraphicsPath
+    $tile.AddArc([float]$ox, [float]$oy, [float](2 * $r), [float](2 * $r), 180, 90)
+    $tile.AddArc([float]($ox + $s - 2 * $r), [float]$oy, [float](2 * $r), [float](2 * $r), 270, 90)
+    $tile.AddArc([float]($ox + $s - 2 * $r), [float]($oy + $s - 2 * $r), [float](2 * $r), [float](2 * $r), 0, 90)
+    $tile.AddArc([float]$ox, [float]($oy + $s - 2 * $r), [float](2 * $r), [float](2 * $r), 90, 90)
+    $tile.CloseFigure()
     # soft outer glow
     foreach ($i in 1..10) {
         $gp = New-Object System.Drawing.Pen (C '#5FE3FF' ([int](14 - $i))), ([float](($i * 12) * $k))
         $gp.LineJoin = 'Round'
-        $g.DrawPath($gp, $head)
+        $g.DrawPath($gp, $tile)
     }
-    $hb = New-Object System.Drawing.Drawing2D.LinearGradientBrush (New-Object System.Drawing.RectangleF ([float]$ox), ([float]($oy + $s * 0.1)), ([float]$s), ([float]($s * 0.8))), (C '#5FE3FF'), (C '#1288D6'), 90
-    $g.FillPath($hb, $head)
-    $eye = New-Object System.Drawing.SolidBrush (C '#06080C')
-    foreach ($side in -1, 1) {
-        $state = $g.Save()
-        $g.TranslateTransform([float]($ox + $s * (0.50 + 0.155 * $side)), [float]($oy + $s * 0.52))
-        $g.RotateTransform([float](-28 * $side))
-        $w = $s * 0.25; $h = $s * 0.115
-        $g.FillEllipse($eye, [float](-$w / 2), [float](-$h / 2), [float]$w, [float]$h)
-        $g.Restore($state)
-    }
+    $tb = New-Object System.Drawing.Drawing2D.LinearGradientBrush (New-Object System.Drawing.RectangleF ([float]$ox), ([float]$oy), ([float]$s), ([float]$s)), (C '#1C2230'), (C '#0B0D12'), 90
+    $g.FillPath($tb, $tile)
+    $mono = New-Object System.Drawing.Drawing2D.GraphicsPath
+    $mono.FillMode = 'Winding'   # overlapping glyph contours must not cut holes
+    $mono.AddString('AH', (New-Object System.Drawing.FontFamily 'Segoe UI'), [int][System.Drawing.FontStyle]::Bold, 100,
+        (New-Object System.Drawing.PointF 0, 0), [System.Drawing.StringFormat]::GenericTypographic)
+    $mbx = $mono.GetBounds()
+    $fit = [Math]::Min($s * 0.70 / $mbx.Width, $s * 0.52 / $mbx.Height)
+    $m = New-Object System.Drawing.Drawing2D.Matrix
+    $m.Translate([float]($ox + ($s - $mbx.Width * $fit) / 2), [float]($oy + ($s - $mbx.Height * $fit) / 2))
+    $m.Scale([float]$fit, [float]$fit)
+    $m.Translate([float](-$mbx.X), [float](-$mbx.Y))
+    $mono.Transform($m)
+    $mb = New-Object System.Drawing.Drawing2D.LinearGradientBrush (New-Object System.Drawing.RectangleF ([float]$ox), ([float]($oy + $s * 0.2)), ([float]$s), ([float]($s * 0.6))), (C '#5FE3FF'), (C '#1288D6'), 90
+    $g.FillPath($mb, $mono)
 
     # vignette towards the bottom, where the Store puts the title
     $vr = New-Object System.Drawing.RectangleF 0, ([float]($H * 0.55)), $W, ([float]($H * 0.45 + 1))

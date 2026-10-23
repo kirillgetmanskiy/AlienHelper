@@ -1,4 +1,4 @@
-﻿# Generates src\AlienHelper\Assets\app.ico: an original alien-head glyph on a dark rounded tile (not the Alienware trademark).
+﻿# Generates src\AlienHelper\Assets\app.ico: an "AH" monogram on a dark rounded tile.
 # Each size is drawn from vectors, so small sizes stay crisp. Usage: powershell -File tools\make-icon.ps1
 Add-Type -AssemblyName System.Drawing
 $ErrorActionPreference = 'Stop'
@@ -27,27 +27,20 @@ function Draw-Icon([int]$s, [switch]$Square) {
     $tb = New-Object System.Drawing.Drawing2D.LinearGradientBrush (New-Object System.Drawing.RectangleF 0, 0, $s, $s), ([System.Drawing.ColorTranslator]::FromHtml('#1C2230')), ([System.Drawing.ColorTranslator]::FromHtml('#0B0D12')), 90
     $g.FillPath($tb, $tile)
 
-    # head: wide cranium tapering to a narrow chin
-    $k = 1.0
-    $head = New-Object System.Drawing.Drawing2D.GraphicsPath
-    $head.AddBezier((P 0.50 0.90 $s), (P 0.31 0.84 $s), (P 0.16 0.62 $s), (P 0.17 0.42 $s))
-    $head.AddBezier((P 0.17 0.42 $s), (P 0.18 0.20 $s), (P 0.33 0.10 $s), (P 0.50 0.10 $s))
-    $head.AddBezier((P 0.50 0.10 $s), (P 0.67 0.10 $s), (P 0.82 0.20 $s), (P 0.83 0.42 $s))
-    $head.AddBezier((P 0.83 0.42 $s), (P 0.84 0.62 $s), (P 0.69 0.84 $s), (P 0.50 0.90 $s))
-    $head.CloseFigure()
-    $hb = New-Object System.Drawing.Drawing2D.LinearGradientBrush (New-Object System.Drawing.RectangleF 0, ($s * 0.1), $s, ($s * 0.8)), ([System.Drawing.ColorTranslator]::FromHtml('#5FE3FF')), ([System.Drawing.ColorTranslator]::FromHtml('#1288D6')), 90
-    $g.FillPath($hb, $head)
-
-    # eyes: slanted almonds
-    $eye = New-Object System.Drawing.SolidBrush ([System.Drawing.ColorTranslator]::FromHtml('#06080C'))
-    foreach ($side in -1, 1) {
-        $state = $g.Save()
-        $g.TranslateTransform([float]($s * (0.50 + 0.155 * $side)), [float]($s * 0.52))
-        $g.RotateTransform([float](-28 * $side))
-        $w = $s * 0.25; $h = $s * 0.115
-        $g.FillEllipse($eye, [float](-$w / 2), [float](-$h / 2), [float]$w, [float]$h)
-        $g.Restore($state)
-    }
+    # "AH" monogram, scaled to fill the middle of the tile
+    $mono = New-Object System.Drawing.Drawing2D.GraphicsPath
+    $mono.FillMode = 'Winding'   # overlapping glyph contours must not cut holes
+    $mono.AddString('AH', (New-Object System.Drawing.FontFamily 'Segoe UI'), [int][System.Drawing.FontStyle]::Bold, 100,
+        (New-Object System.Drawing.PointF 0, 0), [System.Drawing.StringFormat]::GenericTypographic)
+    $b = $mono.GetBounds()
+    $fit = [Math]::Min($s * 0.70 / $b.Width, $s * 0.52 / $b.Height)
+    $m = New-Object System.Drawing.Drawing2D.Matrix
+    $m.Translate([float](($s - $b.Width * $fit) / 2), [float](($s - $b.Height * $fit) / 2))
+    $m.Scale([float]$fit, [float]$fit)
+    $m.Translate([float](-$b.X), [float](-$b.Y))
+    $mono.Transform($m)
+    $mb = New-Object System.Drawing.Drawing2D.LinearGradientBrush (New-Object System.Drawing.RectangleF 0, ($s * 0.2), $s, ($s * 0.6)), ([System.Drawing.ColorTranslator]::FromHtml('#5FE3FF')), ([System.Drawing.ColorTranslator]::FromHtml('#1288D6')), 90
+    $g.FillPath($mb, $mono)
     $g.Dispose()
     return $bmp
 }

@@ -694,19 +694,11 @@ public static class OverlayIcons
                 }
                 g.FillEllipse(brush, r.X + s * 0.38f, r.Y + s * 0.38f, s * 0.24f, s * 0.24f);
                 break;
-            case OvIcon.Mode:  // alien head
-                using (var head = new GraphicsPath())
+            case OvIcon.Mode:  // mode: three sliders at different settings
+                foreach (var (y, k) in new[] { (0.24f, 0.30f), (0.50f, 0.68f), (0.76f, 0.44f) })
                 {
-                    head.AddBezier(P(0.5f, 0.94f), P(0.3f, 0.86f), P(0.12f, 0.62f), P(0.14f, 0.4f));
-                    head.AddBezier(P(0.14f, 0.4f), P(0.16f, 0.14f), P(0.32f, 0.04f), P(0.5f, 0.04f));
-                    head.AddBezier(P(0.5f, 0.04f), P(0.68f, 0.04f), P(0.84f, 0.14f), P(0.86f, 0.4f));
-                    head.AddBezier(P(0.86f, 0.4f), P(0.88f, 0.62f), P(0.7f, 0.86f), P(0.5f, 0.94f));
-                    g.FillPath(brush, head);
-                }
-                using (var eye = new SolidBrush(Color.FromArgb(10, 12, 16)))
-                {
-                    g.FillEllipse(eye, r.X + s * 0.22f, r.Y + s * 0.42f, s * 0.24f, s * 0.14f);
-                    g.FillEllipse(eye, r.X + s * 0.54f, r.Y + s * 0.42f, s * 0.24f, s * 0.14f);
+                    g.DrawLine(pen, P(0.08f, y), P(0.92f, y));
+                    g.FillEllipse(brush, r.X + s * (k - 0.11f), r.Y + s * (y - 0.11f), s * 0.22f, s * 0.22f);
                 }
                 break;
         }
