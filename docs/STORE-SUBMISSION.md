@@ -26,7 +26,7 @@ Package: `installer\Output\AlienHelper-0.1.2.msix` (built by `installer\build-ms
 > chassis lighting. The laptop firmware exposes these controls only through the ACPI WMI class
 > root\WMI\AWCCWmiMethodFunction, whose methods can be called by administrators only; game frame-rate measurement
 > uses an ETW kernel session, which also requires administrator rights. The app starts without elevation and asks
-> for it once through the standard UAC prompt (the user can also choose to start it elevated via a scheduled task).
+> for it through the standard UAC prompt every time; it never bypasses UAC.
 > It installs no services or drivers and only calls the same firmware methods Alienware Command Center uses.
 > Without elevation the app cannot read the fans or change power modes and fan speed, which is its core function,
 > so allowElevation is required.

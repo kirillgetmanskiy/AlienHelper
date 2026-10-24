@@ -262,13 +262,12 @@ public static class L
             "Iniciar minimizado (en la bandeja)", "最小化して起動 (トレイ)", "启动时最小化（托盘）",
         },
         ["opt.autostart"] = new[] { "Запускать при входе в Windows", "Start with Windows", "Lancer avec Windows", "Iniciar con Windows", "Windows 起動時に開始", "随 Windows 启动" },
-        ["opt.nouac"] = new[] { "Запуск без окна UAC", "Start without UAC prompt", "Démarrer sans invite UAC", "Iniciar sin aviso UAC", "UAC なしで起動", "无 UAC 提示启动" },
         ["opt.lang"] = new[] { "Язык", "Language", "Langue", "Idioma", "言語", "语言" },
         ["err.task"] = new[]
         {
-            "Не удалось изменить задачу в Планировщике.", "Could not change the Task Scheduler task.",
-            "Impossible de modifier la tâche planifiée.", "No se pudo cambiar la tarea programada.",
-            "タスク スケジューラのタスクを変更できませんでした。", "无法修改计划任务。",
+            "Не удалось изменить автозапуск.", "Could not change start with Windows.",
+            "Impossible de modifier le lancement avec Windows.", "No se pudo cambiar el inicio con Windows.",
+            "Windows 起動時の開始を変更できませんでした。", "无法修改随 Windows 启动设置。",
         },
 
         // keyboard editor

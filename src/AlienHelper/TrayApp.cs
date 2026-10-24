@@ -57,7 +57,7 @@ public sealed class TrayApp : ApplicationContext
         _exit = ShowSignal.Create(ShowSignal.ExitName);
         _exitWait = ThreadPool.RegisterWaitForSingleObject(_exit,
             (_, _) => { try { _invoker.BeginInvoke(ExitThread); } catch { } }, null, -1, true);
-        Task.Run(Autostart.Refresh);   // keep scheduled tasks pointing at this exe if it was moved
+        Task.Run(Autostart.Refresh);   // keep the Run entry pointing at this exe; drop elevated tasks of older builds
         _invoker.BeginInvoke(CheckHardware);   // after the message loop starts
 
         _tray = new NotifyIcon { Icon = MakeIcon(), Visible = true, Text = Log.AppTitle };

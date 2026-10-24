@@ -154,17 +154,18 @@ The protocol comes from [T-Troll/alienfx-tools](https://github.com/T-Troll/alien
 `publish\AlienHelper.exe` is a single file; .NET does not need to be installed. The AWCC WMI methods are available only
 to administrators, so the app itself runs elevated. The exe starts without elevation (`asInvoker`):
 - if the app is already running, it just shows its window (through the named event `Local\AlienHelper.Show`);
-- if **Start without UAC prompt** is on, it runs the Task Scheduler task `AlienHelper-NoUAC`
-  (no triggers, highest privileges), with no UAC prompt;
-- otherwise it asks for elevation through UAC once.
+- otherwise it asks for elevation through the usual UAC prompt.
 
-The **Start without UAC prompt** switch creates that task; turning it off deletes it. If the exe is moved to another folder,
-the tasks are updated the next time the app starts.
+This is the `no-uac-bypass` branch: the app never starts elevated without a UAC prompt. **Start with Windows** adds an
+entry to `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, so Windows shows the UAC prompt at sign-in; no
+scheduled tasks with highest privileges are created, and those left by the main branch's builds (`AlienHelper`,
+`AlienHelper-NoUAC`) are removed on start (an enabled autostart moves to the Run entry). In the MSIX package the
+autostart option is hidden: there HKCU writes stay in the package's private registry.
 
 - Left click on the tray icon shows or hides the window; right click opens the menu (modes, boost, lighting, overlay,
   language, charts, settings, report, exit).
 - **Settings** window (⚙ button in the main window or tray item): main window sections, overlay and its style, hotkeys,
-  start-up options, start with Windows, start without UAC, language, diagnostics, About.
+  start-up options, start with Windows, language, diagnostics, About.
   About states the device the app was tested on (Alienware 16 Area-51, AA16250) and the models that should
   work but were not tested (Alienware with AWCC, 2020 and later; Dell G15/G16 for modes and fans only).
 - Hotkeys are set in **Settings**: show/hide the overlay (Ctrl+Shift+O by default), cycle the overlay style

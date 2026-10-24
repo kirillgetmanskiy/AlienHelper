@@ -96,7 +96,7 @@ public static class Diagnostics
         }
         sb.AppendLine($"Fan boost: {c.S.FanBoost}   apply on start: {c.S.ApplyOnStart}   start minimized: {c.S.StartMinimized}");
         sb.AppendLine($"Hotkeys: overlay={HotKey.Describe(c.S.OverlayHotkey)} style={HotKey.Describe(c.S.OverlayStyleHotkey)} mode={HotKey.Describe(c.S.ModeHotkey)}");
-        sb.AppendLine($"Tasks: autostart={Autostart.IsEnabled()} noUAC={Autostart.NoUacEnabled()}");
+        sb.AppendLine($"Autostart (Run key, UAC prompt): {Autostart.IsEnabled()}");
         return sb.ToString();
     }
 

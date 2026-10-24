@@ -83,7 +83,8 @@ Name: "{autodesktop}\{#AppTitle}"; Filename: "{app}\{#AppExe}"; Tasks: desktopic
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
-; scheduled tasks the app creates for autostart and for starting without UAC
+; autostart entry (Run key) of this build, and scheduled tasks left by builds that started without UAC
+Filename: "{sys}\reg.exe"; Parameters: "delete HKCU\Software\Microsoft\Windows\CurrentVersion\Run /v AlienHelper /f"; Flags: runhidden; RunOnceId: "DelRunKey"
 Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /F /TN AlienHelper"; Flags: runhidden; RunOnceId: "DelTaskLogon"
 Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /F /TN AlienHelper-NoUAC"; Flags: runhidden; RunOnceId: "DelTaskNoUac"
 

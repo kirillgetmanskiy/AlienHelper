@@ -5,7 +5,7 @@
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
         <!-- asInvoker: hardware access needs admin, so a non-elevated start goes through Launcher
-             (on-demand scheduled task without a prompt, or a single runas prompt) -->
+             (a single runas prompt: this build never bypasses UAC) -->
         <requestedExecutionLevel level="asInvoker" uiAccess="false" />
       </requestedPrivileges>
     </security>

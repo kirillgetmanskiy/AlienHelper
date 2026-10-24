@@ -8,9 +8,8 @@ namespace AlienHelper;
 
 /// <summary>
 /// The exe runs asInvoker. A non-elevated start never touches hardware; it either
-///  - asks an already running (elevated) instance to show its window,
-///  - starts the on-demand scheduled task the user enabled (no UAC prompt), or
-///  - relaunches itself elevated (one UAC prompt).
+///  - asks an already running (elevated) instance to show its window, or
+///  - relaunches itself elevated with the usual UAC prompt (this build never bypasses it).
 /// </summary>
 public static class Launcher
 {
@@ -30,14 +29,6 @@ public static class Launcher
             if (ShowSignal.Exists())
             {
                 if (wantWindow) ShowSignal.TrySignal();
-                return 0;
-            }
-            if (Autostart.Exists(Autostart.LaunchTask) && Autostart.Start(Autostart.LaunchTask))
-            {
-                // the task starts the app in the tray; ask it to open the window once it is up,
-                // unless the user chose to start minimized
-                if (wantWindow && !Settings.Load().StartMinimized)
-                    for (int i = 0; i < 50 && !ShowSignal.TrySignal(); i++) Thread.Sleep(200);
                 return 0;
             }
         }

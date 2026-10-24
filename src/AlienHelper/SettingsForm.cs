@@ -267,22 +267,18 @@ public sealed class SettingsForm : Form
         apply.Toggled += (_, _) => { _c.S.ApplyOnStart = apply.On; _c.S.Save(); };
         var minimized = AddToggle(card, ref cy, new Toggle(L.T("opt.minimized")) { On = _c.S.StartMinimized });
         minimized.Toggled += (_, _) => { _c.S.StartMinimized = minimized.On; _c.S.Save(); };
-        var startup = AddToggle(card, ref cy, new Toggle(L.T("opt.autostart")) { On = Autostart.IsEnabled() });
-        startup.Toggled += async (_, _) =>
+        if (Autostart.Supported)
         {
-            bool want = startup.On;
-            bool ok = await Task.Run(() => want ? Autostart.Enable() : Autostart.Disable());
-            startup.On = await Task.Run(Autostart.IsEnabled);
-            if (!ok) MessageBox.Show(this, L.T("err.task"), Log.AppTitle);
-        };
-        var noUac = AddToggle(card, ref cy, new Toggle(L.T("opt.nouac")) { On = Autostart.NoUacEnabled() });
-        noUac.Toggled += async (_, _) =>
-        {
-            bool want = noUac.On;
-            bool ok = await Task.Run(() => want ? Autostart.EnableNoUac() : Autostart.DisableNoUac());
-            noUac.On = await Task.Run(Autostart.NoUacEnabled);
-            if (!ok) MessageBox.Show(this, L.T("err.task"), Log.AppTitle);
-        };
+            // starts at sign-in through the Run key; Windows then shows the UAC prompt
+            var startup = AddToggle(card, ref cy, new Toggle(L.T("opt.autostart")) { On = Autostart.IsEnabled() });
+            startup.Toggled += async (_, _) =>
+            {
+                bool want = startup.On;
+                bool ok = await Task.Run(() => want ? Autostart.Enable() : Autostart.Disable());
+                startup.On = await Task.Run(Autostart.IsEnabled);
+                if (!ok) MessageBox.Show(this, L.T("err.task"), Log.AppTitle);
+            };
+        }
         return Finish(card, cy);
     }
 
