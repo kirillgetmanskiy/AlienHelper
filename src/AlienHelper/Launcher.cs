@@ -7,35 +7,59 @@ using Microsoft.Win32.SafeHandles;
 namespace AlienHelper;
 
 /// <summary>
-/// The exe runs asInvoker. A non-elevated start never touches hardware; it either
-///  - asks an already running (elevated) instance to show its window, or
-///  - relaunches itself elevated with the usual UAC prompt (this build never bypasses it).
+/// The exe runs asInvoker. A non-elevated start never touches the firmware; it either
+///  - asks an already running instance to show its window, or
+///  - explains why admin rights are needed and relaunches itself elevated with the usual UAC prompt
+///    (this build never bypasses it), or
+///  - when the prompt is declined, runs in limited mode: what works without admin rights (NVIDIA, CPU load, network,
+///    charts), with a button to restart elevated.
 /// </summary>
 public static class Launcher
 {
+    /// <summary><see cref="Run"/> result: start the app here, non-elevated, in limited mode.</summary>
+    public const int Limited = -100;
+    /// <summary>Passed to the elevated instance started from limited mode: it waits for the limited one to exit.</summary>
+    public const string RestartedArg = "--restarted";
+
     public static bool IsElevated()
     {
         using var id = WindowsIdentity.GetCurrent();
         return new WindowsPrincipal(id).IsInRole(WindowsBuiltInRole.Administrator);
     }
 
+    /// <summary>This process runs without admin rights (limited mode).</summary>
+    public static bool IsLimited { get; private set; } = !IsElevated();
+
+    /// <summary>Screenshot mode ("limited"): draws the windows as they look without admin rights.</summary>
+    internal static void PretendLimited() => IsLimited = true;
+
+    /// <summary>WinForms is already set up (the note before the UAC prompt was shown in this process).</summary>
+    public static bool UiReady { get; private set; }
+
     public static int Run(string[] args)
     {
         bool tool = args.Length > 0 && args[0] is "--probe" or "--test" or "--screenshot" or "--fpstest" or "--overlaytest" or "--bench" or "--coretemps" or "--demandtest" or "--curvetest" or "--curvehw" or "--gpuclocks" or "--octest" or "--psys";
         bool wantWindow = !tool && !args.Contains("--tray");
 
-        if (!tool)
+        if (tool) return Elevate(args, wait: true) ? 0 : 1;
+        if (ShowSignal.Exists())
         {
-            if (ShowSignal.Exists())
-            {
-                if (wantWindow) ShowSignal.TrySignal();
-                return 0;
-            }
+            if (wantWindow) ShowSignal.TrySignal();
+            return 0;
         }
-        return Elevate(args, wait: tool);
+        ApplicationConfiguration.Initialize();
+        UiReady = true;
+        using (var g = System.Drawing.Graphics.FromHwnd(IntPtr.Zero)) UI.Theme.Scale = g.DpiX / 96f;
+        var s = Settings.Load();
+        L.Init(s.Language);
+        UI.Theme.Apply(s.Look);
+        // first the note on what the rights are for, then the UAC prompt; either declined: limited mode
+        if (!ElevationNotice.Confirm(null, s)) return Limited;
+        return Elevate(args, wait: false) ? 0 : Limited;
     }
 
-    static int Elevate(string[] args, bool wait)
+    /// <summary>Starts this exe elevated (the UAC prompt); false when the prompt was declined.</summary>
+    public static bool Elevate(IEnumerable<string> args, bool wait)
     {
         var psi = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = true, Verb = "runas" };
         foreach (var a in args) psi.ArgumentList.Add(a);
@@ -43,9 +67,9 @@ public static class Launcher
         {
             using var p = Process.Start(psi);
             if (wait) p?.WaitForExit();
-            return 0;
+            return true;
         }
-        catch (Win32Exception) { return 1; }   // UAC prompt cancelled
+        catch (Win32Exception) { return false; }   // UAC prompt declined
     }
 }
 

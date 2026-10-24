@@ -263,6 +263,31 @@ public static class L
         },
         ["opt.autostart"] = new[] { "Запускать при входе в Windows", "Start with Windows", "Lancer avec Windows", "Iniciar con Windows", "Windows 起動時に開始", "随 Windows 启动" },
         ["opt.lang"] = new[] { "Язык", "Language", "Langue", "Idioma", "言語", "语言" },
+        ["elev.title"] = new[] { "Нужны права администратора", "Administrator rights needed", "Droits d'administrateur requis", "Se necesitan derechos de administrador", "管理者権限が必要です", "需要管理员权限" },
+        ["elev.text"] = new[]
+        {
+            "Переключение режимов питания, управление вентиляторами, температуры ядер и FPS в играх работают только с правами администратора: прошивка ноутбука открывает эти функции только администратору.\n\nСейчас Windows покажет запрос UAC. Если отказаться, программа запустится в ограниченном режиме: мониторинг NVIDIA, загрузка процессора, сеть и графики.",
+            "Switching power modes, fan control, per-core temperatures and in-game FPS need administrator rights: the laptop firmware offers these functions to administrators only.\n\nWindows will now show the UAC prompt. If you decline, the app starts in limited mode: NVIDIA monitoring, CPU load, network and charts.",
+            "Le changement de mode d'alimentation, le contrôle des ventilateurs, les températures par cœur et les FPS en jeu nécessitent les droits d'administrateur : le firmware du portable ne les propose qu'aux administrateurs.\n\nWindows va afficher l'invite UAC. Si vous refusez, l'application démarre en mode limité : surveillance NVIDIA, charge du processeur, réseau et graphiques.",
+            "Cambiar los modos de energía, controlar los ventiladores, las temperaturas por núcleo y los FPS en juegos requieren derechos de administrador: el firmware del portátil solo ofrece estas funciones a los administradores.\n\nWindows mostrará ahora el aviso de UAC. Si lo rechaza, la aplicación se inicia en modo limitado: monitorización de NVIDIA, carga del procesador, red y gráficos.",
+            "電源モードの切り替え、ファン制御、コアごとの温度、ゲームの FPS には管理者権限が必要です。ノート PC のファームウェアはこれらの機能を管理者にのみ提供します。\n\nこれから Windows が UAC の確認を表示します。拒否すると、アプリは制限モードで起動します: NVIDIA の監視、CPU 負荷、ネットワーク、グラフ。",
+            "切换电源模式、控制风扇、每核温度和游戏 FPS 需要管理员权限：笔记本固件只向管理员提供这些功能。\n\nWindows 现在将显示 UAC 提示。如果拒绝，应用将以受限模式启动：NVIDIA 监控、处理器负载、网络和图表。",
+        },
+        ["elev.continue"] = new[] { "Продолжить", "Continue", "Continuer", "Continuar", "続行", "继续" },
+        ["elev.limited"] = new[] { "Без прав", "Without rights", "Sans droits", "Sin derechos", "権限なしで", "不使用权限" },
+        ["elev.dontshow"] = new[] { "Больше не показывать", "Don't show again", "Ne plus afficher", "No volver a mostrar", "今後表示しない", "不再显示" },
+        ["limited.title"] = new[] { "Ограниченный режим", "Limited mode", "Mode limité", "Modo limitado", "制限モード", "受限模式" },
+        ["limited.text"] = new[]
+        {
+            "Нет прав администратора: режимы, вентиляторы, температуры процессора и FPS недоступны.",
+            "No administrator rights: modes, fans, CPU temperatures and FPS are unavailable.",
+            "Pas de droits d'administrateur : modes, ventilateurs, températures du processeur et FPS indisponibles.",
+            "Sin derechos de administrador: modos, ventiladores, temperaturas del procesador y FPS no disponibles.",
+            "管理者権限がありません: モード、ファン、CPU 温度、FPS は使用できません。",
+            "没有管理员权限：模式、风扇、处理器温度和 FPS 不可用。",
+        },
+        ["limited.restart"] = new[] { "Перезапустить с правами администратора", "Restart as administrator", "Redémarrer en administrateur", "Reiniciar como administrador", "管理者として再起動", "以管理员身份重新启动" },
+        ["opt.autostart.windows"] = new[] { "Автозапуск — в параметрах Windows", "Start with Windows — in Windows Settings", "Lancement avec Windows — dans les Paramètres", "Inicio con Windows — en Configuración", "Windows 起動時の開始 — Windows の設定で", "随 Windows 启动 — 在 Windows 设置中" },
         ["err.task"] = new[]
         {
             "Не удалось изменить автозапуск.", "Could not change start with Windows.",

@@ -52,6 +52,7 @@ public sealed class MainForm : Form
         _cardsTop = y;
         Controls.Add(_view);
         _cpu.Title = SystemInfo.CpuName.Length > 0 ? SystemInfo.CpuName : "CPU";
+        if (Launcher.IsLimited) y = BuildLimited(y);
         y = BuildChip(y, "cpu", _cpu, _ram, Controller.CpuSensor, out _cpuChip);
         y = BuildChip(y, "gpu", _gpu, _vram, Controller.GpuSensor, out _gpuChip);
         y = BuildSsd(y);
@@ -525,6 +526,25 @@ public sealed class MainForm : Form
 
     /// <summary>Opens the fan curve editor (set by the tray app).</summary>
     public Action? OpenCurves { get; set; }
+
+    /// <summary>Limited mode: restarts the app with admin rights (set by the tray app).</summary>
+    public Action? RestartElevated { get; set; }
+
+    /// <summary>Limited mode (no admin rights): what is missing and a button that restarts the app elevated.</summary>
+    int BuildLimited(int y)
+    {
+        var card = AddCard("limited", new Card { Caption = L.T("limited.title") });
+        var font = Theme.Font(9f);
+        string text = L.T("limited.text");
+        var lbl = new Label { Text = text, Font = font, ForeColor = Blend(Muted, Fg, 0.5f), AutoSize = false };
+        lbl.Bounds = new Rectangle(S(Pad), S(Top + 4), Inner, TextRenderer.MeasureText(text, font, new Size(Inner, 0), TextFormatFlags.WordBreak).Height + S(4));
+        card.Controls.Add(lbl);
+        var btn = new PillButton(L.T("limited.restart")) { Active = true, Bounds = new Rectangle(S(Pad), lbl.Bottom + S(6), Inner, S(30)) };
+        btn.Click += (_, _) => RestartElevated?.Invoke();
+        card.Controls.Add(btn);
+        card.SetBounds(S(M), y, CardW, btn.Bottom + S(Pad));
+        return card.Bottom + S(Gap);
+    }
     /// <summary>Custom entered or left (any window, the tray, the G key): relayout the boost area.</summary>
     public void RefreshBoost() { LayoutBoost(); Reflow(); }
     readonly Slider _boostCpu = new(), _boostGpu = new();

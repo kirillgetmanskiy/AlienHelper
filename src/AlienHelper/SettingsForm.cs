@@ -279,6 +279,18 @@ public sealed class SettingsForm : Form
                 if (!ok) MessageBox.Show(this, L.T("err.task"), Log.AppTitle);
             };
         }
+        else
+        {
+            // MSIX: the package declares a startup task (off by default); Windows turns it on in Startup apps
+            var open = new PillButton(L.T("opt.autostart.windows")) { Bounds = new Rectangle(S(Pad), cy, Inner, S(28)) };
+            open.Click += (_, _) =>
+            {
+                try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("ms-settings:startupapps") { UseShellExecute = true }); }
+                catch (Exception ex) { Log.Warn("open startup apps: " + ex.Message); }
+            };
+            card.Controls.Add(open);
+            cy += S(32);
+        }
         return Finish(card, cy);
     }
 

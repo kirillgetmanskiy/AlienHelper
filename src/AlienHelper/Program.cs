@@ -17,7 +17,12 @@ static class Program
         // read-only NVIDIA thermal sensor dump (development aid; needs no admin)
         if (args.Length >= 2 && args[0] == "--nvapi") return NvApiDump(args[1]);
 
-        if (!Launcher.IsElevated()) return Launcher.Run(args);
+        if (Launcher.IsLimited)
+        {
+            int r = Launcher.Run(args);
+            if (r != Launcher.Limited) return r;
+            Log.Info("admin rights declined: limited mode");
+        }
 
         if (args.Length >= 2 && args[0] == "--probe") return Probe(args[1]);
         if (args.Length >= 2 && args[0] == "--test") return Test(args[1], args.Skip(2).ToArray());
@@ -31,14 +36,18 @@ static class Program
         if (args.Length >= 2 && args[0] == "--psys") return PsysTest(args[1]);
         if (args.Length >= 2 && args[0] == "--gpuclocks") return GpuClocksDump(args[1], args.Skip(2).ToArray());
 
-        using var mutex = new Mutex(true, "AlienHelper.SingleInstance", out bool first);
+        // started from limited mode with admin rights: wait until the limited instance has exited
+        using var mutex = new Mutex(false, "AlienHelper.SingleInstance");
+        bool first;
+        try { first = mutex.WaitOne(args.Contains(Launcher.RestartedArg) ? 15000 : 0); }
+        catch (AbandonedMutexException) { first = true; }
         if (!first && args.FirstOrDefault() is not ("--screenshot" or "--overlaytest"))
         {
             if (!args.Contains("--tray")) ShowSignal.TrySignal();
             return 0;
         }
 
-        ApplicationConfiguration.Initialize();
+        if (!Launcher.UiReady) ApplicationConfiguration.Initialize();
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
         Application.ThreadException += (_, e) => Log.Error("UI thread exception", e.Exception);
         AppDomain.CurrentDomain.UnhandledException += (_, e) => Log.Fatal(e.ExceptionObject as Exception);
@@ -52,12 +61,13 @@ static class Program
         if (args.Length >= 2 && args[0] == "--screenshot")
         {
             int Arg(string name) => int.TryParse(args.FirstOrDefault(a => a.StartsWith(name + "="))?[(name.Length + 1)..], out var v) ? v : 0;
+            if (args.Contains("limited")) Launcher.PretendLimited();
             return Screenshot(args[1], args.Contains("split"), args.FirstOrDefault(a => a.StartsWith("hide="))?[5..].Split(','), Arg("fakegpus"), Arg("fakedisks"), Arg("poll"), args.Contains("lite"), args.Contains("custom"), Arg("wait"));
         }
         if (args.Length >= 2 && args[0] == "--overlaytest") return OverlayTest(args[1]);
         Log.Cleanup();
         Log.Info($"AlienHelper {typeof(Program).Assembly.GetName().Version} starting, args='{string.Join(' ', args)}', os={Environment.OSVersion.VersionString}");
-        Application.Run(new TrayApp(showWindow: !args.Contains("--tray")));
+        Application.Run(new TrayApp(showWindow: !args.Contains("--tray") || args.Contains(Launcher.RestartedArg)));
         return 0;
     }
 
@@ -457,6 +467,8 @@ static class Program
         if (!lite) curves.Show();
         var about = new AboutForm();
         if (!lite) about.Show();
+        var notice = new ElevationNotice { TopMost = false };
+        if (!lite) notice.Show();
         if (!lite) foreach (var ov in overlays) ov.ShowNoActivate();   // lite: only the main window and charts, as in daily use
         // sample timing: how evenly readings arrive and what they cost (written to samples.txt)
         var stamps = new List<long>();
@@ -476,7 +488,7 @@ static class Program
         {
             t.Stop();
             Directory.CreateDirectory(dir);
-            var forms = new List<(Form, string)> { (main, "main.png"), (charts, "charts.png"), (keys, "keys.png"), (settings, "settings.png"), (curves, "curves.png"), (about, "about.png") };
+            var forms = new List<(Form, string)> { (main, "main.png"), (charts, "charts.png"), (keys, "keys.png"), (settings, "settings.png"), (curves, "curves.png"), (about, "about.png"), (notice, "elevation.png") };
             forms.AddRange(overlays.Select((o, i) => ((Form)o, $"overlay{i}.png")));
             foreach (var (f, name) in forms)
             {

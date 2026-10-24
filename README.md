@@ -154,13 +154,17 @@ The protocol comes from [T-Troll/alienfx-tools](https://github.com/T-Troll/alien
 `publish\AlienHelper.exe` is a single file; .NET does not need to be installed. The AWCC WMI methods are available only
 to administrators, so the app itself runs elevated. The exe starts without elevation (`asInvoker`):
 - if the app is already running, it just shows its window (through the named event `Local\AlienHelper.Show`);
-- otherwise it asks for elevation through the usual UAC prompt.
+- otherwise it first explains what the rights are for (the note can be turned off), then asks for elevation through
+  the usual UAC prompt;
+- if the prompt is declined, the app runs in **limited mode**: what works without admin rights (NVIDIA monitoring,
+  CPU load, network, charts) and a **Restart as administrator** button in the main window and the tray menu.
 
 This is the `no-uac-bypass` branch: the app never starts elevated without a UAC prompt. **Start with Windows** adds an
 entry to `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, so Windows shows the UAC prompt at sign-in; no
 scheduled tasks with highest privileges are created, and those left by the main branch's builds (`AlienHelper`,
-`AlienHelper-NoUAC`) are removed on start (an enabled autostart moves to the Run entry). In the MSIX package the
-autostart option is hidden: there HKCU writes stay in the package's private registry.
+`AlienHelper-NoUAC`) are removed on start (an enabled autostart moves to the Run entry). The MSIX
+package declares a Windows startup task instead (off by default): Settings has a button that opens
+Settings > Apps > Startup, where the user turns it on; the app then starts at sign-in and shows one UAC prompt.
 
 - Left click on the tray icon shows or hides the window; right click opens the menu (modes, boost, lighting, overlay,
   language, charts, settings, report, exit).

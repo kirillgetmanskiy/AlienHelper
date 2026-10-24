@@ -171,6 +171,7 @@ public sealed class TrayApp : ApplicationContext
             lang.DropDownItems.Add(new ToolStripMenuItem(name, null, (_, _) => SetLanguage(lc)) { Checked = L.Current == code, ForeColor = Theme.Fg });
         }
         m.Items.Add(lang);
+        if (Launcher.IsLimited) m.Items.Add(L.T("limited.restart"), null, (_, _) => RestartElevated());
         m.Items.Add(L.T("btn.charts"), null, (_, _) => OpenCharts());
         m.Items.Add(L.T("tray.open"), null, (_, _) => ToggleWindow(true));
         m.Items.Add(L.T("settings"), null, (_, _) => OpenSettings());
@@ -184,7 +185,7 @@ public sealed class TrayApp : ApplicationContext
     {
         if (_form == null || _form.IsDisposed)
         {
-            _form = new MainForm(_c, _mon, OpenCharts) { OpenKeys = OpenKeys, OpenSettings = OpenSettings, OpenCurves = OpenCurves };
+            _form = new MainForm(_c, _mon, OpenCharts) { OpenKeys = OpenKeys, OpenSettings = OpenSettings, OpenCurves = OpenCurves, RestartElevated = RestartElevated };
             _form.Show();
             _form.Activate();
             return;
@@ -392,10 +393,24 @@ public sealed class TrayApp : ApplicationContext
     }
 
     /// <summary>Explains limited mode on unsupported hardware; warns once about untested Alienware models.</summary>
+    /// <summary>
+    /// Limited mode: after the note on what the rights are for, starts an elevated instance (the UAC prompt) and exits
+    /// once it is running; it waits for this one to close. Declined: nothing changes.
+    /// </summary>
+    void RestartElevated()
+    {
+        var owner = _form is { IsDisposed: false, Visible: true } ? _form : null;
+        if (!ElevationNotice.Confirm(owner, _c.S)) return;
+        if (!Launcher.Elevate(new[] { Launcher.RestartedArg }, wait: false)) return;
+        Log.Info("limited mode: restarting with admin rights");
+        ExitThread();
+    }
+
     void CheckHardware()
     {
         if (Log.TakeCrashFlag()) OfferCrashReport();
         var model = Hardware.SystemInfo.Model;
+        if (Launcher.IsLimited) return;   // without admin rights the firmware is closed anyway; the main window says so
         if (_c.Awcc == null)
         {
             MessageBox.Show(L.T("hw.unsupported", model.Length > 0 ? model : "?"), Log.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
