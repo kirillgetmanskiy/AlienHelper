@@ -267,6 +267,12 @@ public sealed class SettingsForm : Form
         apply.Toggled += (_, _) => { _c.S.ApplyOnStart = apply.On; _c.S.Save(); };
         var minimized = AddToggle(card, ref cy, new Toggle(L.T("opt.minimized")) { On = _c.S.StartMinimized });
         minimized.Toggled += (_, _) => { _c.S.StartMinimized = minimized.On; _c.S.Save(); };
+        if (_c.Keyboard != null || _c.Chassis != null)
+        {
+            var guard = AddToggle(card, ref cy, new Toggle(L.T("opt.guardlights")) { On = _c.S.GuardLights });
+            guard.Toggled += (_, _) => { _c.S.GuardLights = guard.On; _c.S.Save(); if (guard.On) Task.Run(_c.EnforceLights); };
+            new ToolTip { AutoPopDelay = 15000, InitialDelay = 300 }.SetToolTip(guard, L.T("opt.guardlights.tip"));
+        }
         if (Autostart.Supported)
         {
             // starts at sign-in through the Run key; Windows then shows the UAC prompt

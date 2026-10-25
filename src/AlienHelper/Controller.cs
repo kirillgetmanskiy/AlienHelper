@@ -427,6 +427,26 @@ public sealed class Controller : IDisposable
 
     public void LightsOn() { S.LightsEnabled = true; S.Save(); ApplyLights(); }
 
+    /// <summary>
+    /// Puts our lighting back over whatever AWCC's lighting agent wrote (it repaints after sign-in, unlock and sleep):
+    /// our colors, or dark when the lights are turned off here. A running animation repaints the keyboard by itself,
+    /// so then only the chassis is rewritten.
+    /// </summary>
+    public void EnforceLights()
+    {
+        try
+        {
+            if (!S.LightsEnabled)
+            {
+                Keyboard?.SetBrightness(0, S.KeyboardLights);
+                Chassis?.SetBrightness(0, S.ChassisLights);
+            }
+            else if (AnimationId == null) ApplyLights();
+            else SetChassis(ColorTranslator.FromHtml(S.ChassisColor), S.ChassisBrightness);
+        }
+        catch (Exception ex) { Log.Warn("lights check: " + ex.Message); }
+    }
+
     public void ApplyLights()
     {
         if (!S.LightsEnabled) return;
