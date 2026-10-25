@@ -59,6 +59,7 @@ public sealed class TrayApp : ApplicationContext
             (_, _) => { try { _invoker.BeginInvoke(ExitThread); } catch { } }, null, -1, true);
         Task.Run(Autostart.Refresh);   // keep scheduled tasks pointing at this exe if it was moved
         _invoker.BeginInvoke(CheckHardware);   // after the message loop starts
+        GuardLightsAfterWake("start");          // the agent also repaints right after sign-in
 
         _tray = new NotifyIcon { Icon = MakeIcon(), Visible = true, Text = Log.AppTitle };
         _tray.MouseClick += (_, e) => { if (e.Button == MouseButtons.Left) ToggleWindow(); };
@@ -86,13 +87,17 @@ public sealed class TrayApp : ApplicationContext
         {
             Task.Run(async () => { await Task.Delay(3000); _c.ApplyLights(); _oc.Sync(); });
             GuardModeAfterWake("resume");
+            GuardLightsAfterWake("resume");
         }
     }
 
     void OnSessionSwitch(object? s, SessionSwitchEventArgs e)
     {
         if (e.Reason is SessionSwitchReason.SessionUnlock or SessionSwitchReason.ConsoleConnect or SessionSwitchReason.SessionLogon)
+        {
             GuardModeAfterWake("unlock");
+            GuardLightsAfterWake("unlock");
+        }
     }
 
     void BuildMenu()
@@ -371,6 +376,24 @@ public sealed class TrayApp : ApplicationContext
             {
                 await Task.Delay(ms);
                 _c.RestoreMode();
+            }
+        });
+    }
+
+    /// <summary>
+    /// "Guard lighting from AWCC": AWCC's lighting agent repaints the keyboard a few seconds after sign-in, unlock and
+    /// sleep, at no fixed moment, so ours is put back several times over the first minute.
+    /// </summary>
+    void GuardLightsAfterWake(string why)
+    {
+        if (!_c.S.GuardLights || (_c.Keyboard == null && _c.Chassis == null)) return;
+        Log.Info("guarding the lighting after " + why);
+        Task.Run(async () =>
+        {
+            foreach (int ms in new[] { 2000, 6000, 12000, 25000 })   // at 2, 8, 20 and 45 s
+            {
+                await Task.Delay(ms);
+                _c.EnforceLights();
             }
         });
     }
