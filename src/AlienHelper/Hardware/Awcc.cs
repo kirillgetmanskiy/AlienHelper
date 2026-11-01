@@ -140,7 +140,17 @@ public sealed class Awcc : IDisposable
         if (!HasGMode) return false;
         // Op 1 is a toggle on most firmware, so only send it when the state differs.
         bool ok = true;
-        if (on) SetProfile(ProfileGMode);
+        if (on)
+        {
+            // after sleep the firmware can drop the profile while GameShift still reads "on"; writing the profile alone
+            // then seems to leave the lower GPU power limit in place, so GameShift goes off and on again, as a manual switch does
+            if (GetGMode() > 0 && GetProfile() != ProfileGMode)
+            {
+                Call("GameShiftStatus", 0x01, 0);
+                Thread.Sleep(300);
+            }
+            SetProfile(ProfileGMode);
+        }
         int cur = GetGMode();
         if (cur >= 0 && (cur != 0) != on)
             ok = !Failed(Call("GameShiftStatus", 0x01, (byte)(on ? 1 : 0)));

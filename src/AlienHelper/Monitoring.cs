@@ -330,6 +330,16 @@ public sealed class SensorMonitor : IDisposable
         return init.IsCompleted;
     }
 
+    /// <summary>Diagnostics: the GPU power limit in the log whenever it moves, with the mode and the load at that moment.</summary>
+    void LogPowerLimit(GpuDevice gd, Nvml.Reading r)
+    {
+        long now = Clock.ElapsedMilliseconds;
+        if (r.PowerLimitW <= 0 || Math.Abs(r.PowerLimitW - gd.LoggedLimit) < 5 || now - gd.LimitLoggedAt < 10000) return;
+        Log.Info($"gpu power limit {gd.LoggedLimit:0} -> {r.PowerLimitW:0} W: mode 0x{Last?.Profile ?? -1:X2}, draw {r.PowerW:0} W, load {r.Load}%");
+        gd.LoggedLimit = r.PowerLimitW;
+        gd.LimitLoggedAt = now;
+    }
+
     void ReadGpus()
     {
         foreach (var gd in Gpus)
@@ -338,6 +348,7 @@ public sealed class SensorMonitor : IDisposable
             {
                 if (gd.Fake) { var f = Gpus[0].Stats; gd.Stats = f; gd.Temp = Gpus[0].Temp; continue; }
                 var r = _nvml!.Read(gd.Index);
+                LogPowerLimit(gd, r);
                 int mem = r.MemTemp > 0 ? r.MemTemp : _nvapi?.MemoryTemp(gd.Bus, gd.Index) ?? -1;
                 gd.Stats = new GpuStats(r.Load, r.CoreMhz, r.MemMhz, r.PowerW, r.VramUsedGb, r.VramTotalGb, mem);
                 gd.Temp = r.Temp;
@@ -533,6 +544,8 @@ public sealed class GpuDevice
     public int Temp { get; set; } = -1;
     public List<float> Temps { get; } = new();   // °C (NVML)
     public List<float> Clock { get; } = new();   // GHz
+    internal float LoggedLimit;      // power limit last written to the log
+    internal long LimitLoggedAt = -10000;
     public List<float> Power { get; } = new();   // W
     public List<float> Vram { get; } = new();    // GB
     public List<float> MemTemps { get; } = new();   // °C, VRAM (NVAPI)
