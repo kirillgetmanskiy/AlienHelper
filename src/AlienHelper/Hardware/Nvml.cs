@@ -8,7 +8,7 @@ namespace AlienHelper.Hardware;
 /// </summary>
 public sealed class Nvml : IDisposable
 {
-    public sealed record Reading(int Temp, int MemTemp, int CoreMhz, int MemMhz, float PowerW, int Load, float VramUsedGb, float VramTotalGb);
+    public sealed record Reading(int Temp, int MemTemp, int CoreMhz, int MemMhz, float PowerW, int Load, float VramUsedGb, float VramTotalGb, float PowerLimitW);
 
     readonly IntPtr[] _devs;
     readonly uint[] _maxMw;   // highest power reading we believe, per GPU
@@ -71,7 +71,8 @@ public sealed class Nvml : IDisposable
         int load = nvmlDeviceGetUtilizationRates(dev, out var u) == 0 ? (int)u.gpu : -1;
         float used = -1, total = -1;
         if (nvmlDeviceGetMemoryInfo(dev, out var mi) == 0) { used = mi.used / 1073741824f; total = mi.total / 1073741824f; }
-        return new Reading(temp, MemTemp(dev), core, mem, pw, load, used, total);
+        float limit = nvmlDeviceGetEnforcedPowerLimit(dev, out uint lim) == 0 ? lim / 1000f : -1;
+        return new Reading(temp, MemTemp(dev), core, mem, pw, load, used, total, limit);
     }
 
     static int MemTemp(IntPtr dev)
@@ -107,6 +108,7 @@ public sealed class Nvml : IDisposable
     [DllImport(Dll)] static extern int nvmlDeviceGetClockInfo(IntPtr dev, int type, out uint mhz);
     [DllImport(Dll)] static extern int nvmlDeviceGetMaxClockInfo(IntPtr dev, int type, out uint mhz);
     [DllImport(Dll)] static extern int nvmlDeviceGetPowerUsage(IntPtr dev, out uint mw);
+    [DllImport(Dll)] static extern int nvmlDeviceGetEnforcedPowerLimit(IntPtr dev, out uint mw);
     [DllImport(Dll)] static extern int nvmlDeviceGetPowerManagementLimitConstraints(IntPtr dev, out uint minMw, out uint maxMw);
     [DllImport(Dll)] static extern int nvmlDeviceGetUtilizationRates(IntPtr dev, out Utilization u);
     [DllImport(Dll)] static extern int nvmlDeviceGetPciInfo_v3(IntPtr dev, out PciInfo p);
