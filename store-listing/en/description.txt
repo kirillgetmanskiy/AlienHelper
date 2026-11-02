@@ -38,6 +38,15 @@ Controlling power modes and fans requires administrator rights: the laptop firmw
 
 Alien Helper is an independent project, not affiliated with, endorsed or sponsored by Dell Technologies Inc. Alienware, AlienFX, Alienware Command Center and Area-51 are trademarks of Dell Inc., mentioned only to identify compatible hardware. Changing modes, fans and overclocking is at your own risk.
 
+Components and drivers
+• .NET 8 (MIT): https://dotnet.microsoft.com/
+• System.Management, System.Diagnostics.PerformanceCounter (MIT): https://github.com/dotnet/runtime
+• TraceEvent (MIT): https://github.com/microsoft/perfview
+• alienfx-tools (MIT): https://github.com/T-Troll/alienfx-tools
+• PawnIO IntelMSR module (LGPL-2.1): https://github.com/namazso/PawnIO.Modules
+• NVML, NVAPI (NVIDIA driver): https://developer.nvidia.com/management-library-nvml, https://github.com/NVIDIA/nvapi
+• PawnIO driver (optional, installed separately): https://pawnio.eu/
+
 FEATURES (one per line)
 Power modes and Alien Mode in one click
 Custom mode with your own CPU and GPU fan curves

@@ -38,6 +38,15 @@ Alien Helper — компактная программа для управлен
 
 Alien Helper — независимый проект, не связанный с Dell Technologies Inc. и не одобренный ею. Alienware, AlienFX, Alienware Command Center и Area-51 — товарные знаки Dell Inc., они упоминаются только для указания совместимого оборудования. Изменение режимов, вентиляторов и разгон выполняются на ваш риск.
 
+Компоненты и драйверы
+• .NET 8 (MIT): https://dotnet.microsoft.com/
+• System.Management, System.Diagnostics.PerformanceCounter (MIT): https://github.com/dotnet/runtime
+• TraceEvent (MIT): https://github.com/microsoft/perfview
+• alienfx-tools (MIT): https://github.com/T-Troll/alienfx-tools
+• PawnIO IntelMSR module (LGPL-2.1): https://github.com/namazso/PawnIO.Modules
+• NVML, NVAPI (драйвер NVIDIA): https://developer.nvidia.com/management-library-nvml, https://github.com/NVIDIA/nvapi
+• PawnIO driver (необязательный, ставится отдельно): https://pawnio.eu/
+
 ВОЗМОЖНОСТИ (по одной строке)
 Режимы питания и Alien Mode в один клик
 Режим Custom со своими кривыми вентиляторов CPU и GPU

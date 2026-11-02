@@ -1,5 +1,3 @@
-using System.Reflection.Metadata;
-using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
 
@@ -8,8 +6,8 @@ namespace AlienHelper.Hardware;
 /// <summary>
 /// Per-core Intel CPU temperatures from the digital thermal sensors (MSR IA32_THERM_STATUS 0x19C, TjMax from
 /// IA32_TEMPERATURE_TARGET 0x1A2). Windows has no API for them, so this needs the signed PawnIO driver and its
-/// IntelMSR module. AlienHelper installs neither: it uses PawnIO when another app (CapFrameX, FanControl,
-/// LibreHardwareMonitor…) has already installed it, and takes the module from that app. Read-only.
+/// IntelMSR module. The module is built into the app; the driver is not installed by it: it is used when present
+/// (its own installer, or another app such as CapFrameX). Read-only.
 /// </summary>
 public sealed class CoreTemps : IDisposable
 {
@@ -125,58 +123,18 @@ public sealed class CoreTemps : IDisposable
         return Path.GetDirectoryName(path);
     }
 
-    /// <summary>
-    /// The signed IntelMSR module: a file next to AlienHelper.exe, or the copy embedded in an installed
-    /// LibreHardwareMonitorLib.dll (CapFrameX, FanControl, LibreHardwareMonitor).
-    /// </summary>
+    /// <summary>The signed IntelMSR module: a file next to AlienHelper.exe, or the copy built into the app.</summary>
     static (byte[]? blob, string source) FindModule()
     {
         var local = Path.Combine(AppContext.BaseDirectory, "IntelMSR.bin");
         if (File.Exists(local)) return (File.ReadAllBytes(local), local);
-        var roots = new[] { Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86) };
-        foreach (var root in roots)
-            foreach (var app in new[] { "CapFrameX", "FanControl", "LibreHardwareMonitor", "Fan Control" })
-            {
-                var dll = Path.Combine(root, app, "LibreHardwareMonitorLib.dll");
-                if (!File.Exists(dll)) continue;
-                try
-                {
-                    // read the resource only; nothing from that library is executed
-                    var asm = new MetadataLoadContextLite(dll);
-                    var blob = asm.Resource("IntelMSR.bin");
-                    if (blob != null) return (blob, dll);
-                }
-                catch { }
-            }
-        return (null, "");
+        using var res = typeof(CoreTemps).Assembly.GetManifestResourceStream("AlienHelper.IntelMSR.bin");
+        if (res == null) return (null, "");
+        using var ms = new MemoryStream();
+        res.CopyTo(ms);
+        return (ms.ToArray(), "built in");
     }
 
     [DllImport("kernel32.dll")] static extern IntPtr GetCurrentThread();
     [DllImport("kernel32.dll")] static extern UIntPtr SetThreadAffinityMask(IntPtr thread, UIntPtr mask);
-}
-
-/// <summary>Reads a managed resource from an assembly file without loading (or running) the assembly.</summary>
-sealed class MetadataLoadContextLite
-{
-    readonly string _path;
-    public MetadataLoadContextLite(string path) { _path = path; }
-
-    public byte[]? Resource(string endsWith)
-    {
-        using var fs = File.OpenRead(_path);
-        using var pe = new PEReader(fs);
-        var md = pe.GetMetadataReader();
-        foreach (var h in md.ManifestResources)
-        {
-            var r = md.GetManifestResource(h);
-            string name = md.GetString(r.Name);
-            if (!name.EndsWith(endsWith, StringComparison.OrdinalIgnoreCase) || !r.Implementation.IsNil) continue;
-            var dir = pe.PEHeaders.CorHeader!.ResourcesDirectory;
-            var block = pe.GetSectionData(dir.RelativeVirtualAddress);
-            var reader = block.GetReader((int)r.Offset, block.Length - (int)r.Offset);
-            int len = reader.ReadInt32();
-            return reader.ReadBytes(len);
-        }
-        return null;
-    }
 }

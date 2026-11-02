@@ -38,6 +38,15 @@ Le contrôle des modes et des ventilateurs nécessite les droits d'administrateu
 
 Alien Helper est un projet indépendant, non affilié à Dell Technologies Inc., ni approuvé ni sponsorisé par elle. Alienware, AlienFX, Alienware Command Center et Area-51 sont des marques de Dell Inc., citées uniquement pour identifier le matériel compatible. Modifier les modes, les ventilateurs ou overclocker se fait à vos risques.
 
+Composants et pilotes
+• .NET 8 (MIT): https://dotnet.microsoft.com/
+• System.Management, System.Diagnostics.PerformanceCounter (MIT): https://github.com/dotnet/runtime
+• TraceEvent (MIT): https://github.com/microsoft/perfview
+• alienfx-tools (MIT): https://github.com/T-Troll/alienfx-tools
+• PawnIO IntelMSR module (LGPL-2.1): https://github.com/namazso/PawnIO.Modules
+• NVML, NVAPI (pilote NVIDIA): https://developer.nvidia.com/management-library-nvml, https://github.com/NVIDIA/nvapi
+• PawnIO driver (facultatif, installé séparément): https://pawnio.eu/
+
 FONCTIONNALITÉS (une par ligne)
 Modes d'alimentation et Alien Mode en un clic
 Mode Custom avec vos courbes de ventilateurs CPU et GPU

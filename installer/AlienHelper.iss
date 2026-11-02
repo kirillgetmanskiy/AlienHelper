@@ -64,6 +64,12 @@ fr.DeleteSettings=Also delete AlienHelper settings (%APPDATA%\AlienHelper)?
 es.DeleteSettings=Also delete AlienHelper settings (%APPDATA%\AlienHelper)?
 ja.DeleteSettings=Also delete AlienHelper settings (%APPDATA%\AlienHelper)?
 
+en.GetPawnIO=Open the PawnIO page (needed for per-core temperatures and total power)
+ru.GetPawnIO=Открыть страницу PawnIO (нужен для температур ядер и общего потребления)
+fr.GetPawnIO=Ouvrir la page PawnIO (nécessaire pour les températures par cœur et la puissance totale)
+es.GetPawnIO=Abrir la página de PawnIO (necesario para las temperaturas por núcleo y la potencia total)
+ja.GetPawnIO=PawnIO のページを開く (コアごとの温度と総消費電力に必要)
+
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
@@ -81,6 +87,8 @@ Name: "{autodesktop}\{#AppTitle}"; Filename: "{app}\{#AppExe}"; Tasks: desktopic
 [Run]
 ; the installer is elevated, so the app starts without a second UAC prompt
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
+; the app installs no driver: the optional PawnIO driver comes from its own site
+Filename: "https://pawnio.eu/"; Description: "{cm:GetPawnIO}"; Flags: shellexec postinstall skipifsilent unchecked nowait runasoriginaluser; Check: not PawnIoInstalled
 
 [UninstallRun]
 ; autostart entry (Run key) of this build, and scheduled tasks left by builds that started without UAC
@@ -122,6 +130,11 @@ procedure InitializeWizard();
 begin
   DisclaimerPage := CreateOutputMsgPage(wpLicense, SetupMessage(msgWizardInfoBefore),
     SetupMessage(msgInfoBeforeLabel), CustomMessage('Disclaimer'));
+end;
+
+function PawnIoInstalled(): Boolean;
+begin
+  Result := RegKeyExists(HKLM, 'SYSTEM\CurrentControlSet\Services\PawnIO');
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;

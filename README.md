@@ -92,8 +92,8 @@ The protocol comes from [T-Troll/alienfx-tools](https://github.com/T-Troll/alien
     The counters run only while the charts window is open.
   - Per-core temperatures (orange line and value on each tile) come from the CPU's digital thermal sensors
     (MSR 0x19C, TjMax from 0x1A2), read through the signed PawnIO driver. Alien Helper installs no driver: it uses PawnIO
-    when another app has installed it (CapFrameX, FanControl, LibreHardwareMonitor) and loads the IntelMSR module from
-    that app's LibreHardwareMonitorLib.dll or from IntelMSR.bin next to the exe. Read-only; matched Core Temp on this laptop.
+    when it is present, with the IntelMSR module built into the app (IntelMSR.bin next to the exe takes priority).
+    Read-only; matched Core Temp on this laptop.
     Without PawnIO the tiles show load and clock only.
 - All metrics refresh every 2 s by default. **Settings** → **Metrics refresh** sets it from 0.1 to 10 s in 0.1 s steps;
   charts and sparklines keep covering the same time (charts 5 min, tiles ~80 s, overlay 2 min), only with more or fewer points.
@@ -295,6 +295,34 @@ For the Microsoft Store, the installer and the exe must be signed with a code si
 the author is not liable for hardware damage, overheating or other consequences. The "Alien Helper" name and icon
 are not licensed for modified versions (GPL section 7(e)). Details, trademarks and third-party sources are
 in [NOTICE.md](NOTICE.md). The project is not affiliated with Dell Inc.; Alienware is a trademark of Dell Inc.
+
+## Components and drivers
+
+Included in the app:
+
+| Component | What it does | License | Link |
+|---|---|---|---|
+| .NET 8 and Windows Desktop runtime | runtime and interface | MIT | [dotnet.microsoft.com](https://dotnet.microsoft.com/) |
+| System.Management | WMI access (firmware, battery, disks) | MIT | [dotnet/runtime](https://github.com/dotnet/runtime) |
+| System.Diagnostics.PerformanceCounter | CPU, disk and power counters | MIT | [dotnet/runtime](https://github.com/dotnet/runtime) |
+| Microsoft.Diagnostics.Tracing.TraceEvent | FPS and frame time in the overlay | MIT | [microsoft/perfview](https://github.com/microsoft/perfview) |
+| IntelMSR module for PawnIO | per-core temperatures and total power | LGPL-2.1 | [namazso/PawnIO.Modules](https://github.com/namazso/PawnIO.Modules) |
+
+The full list of NuGet dependencies is in `THIRD-PARTY-NOTICES.txt`. The AlienFX and AWCC code is based on
+[alienfx-tools](https://github.com/T-Troll/alienfx-tools) (MIT). The installer is built with
+[Inno Setup](https://jrsoftware.org/isinfo.php).
+
+Not included, used when present on the system:
+
+| Component | What it does | Comes from | Link |
+|---|---|---|---|
+| NVML (`nvml.dll`), NVAPI | GPU sensors and overclock | NVIDIA driver | [NVML](https://developer.nvidia.com/management-library-nvml), [NVAPI](https://github.com/NVIDIA/nvapi) |
+| PawnIO driver | reads the CPU registers | optional, separate install | [pawnio.eu](https://pawnio.eu/) |
+| AWCC firmware interface (`AWCCWmiMethodFunction`) | modes and fans | laptop firmware and Dell drivers | [Dell support](https://www.dell.com/support) |
+
+The app installs no drivers. Without PawnIO it works, but shows no per-core temperatures and no total power on AC. The
+Setup installer offers to open the PawnIO page when the driver is missing. Some anti-cheat systems have reportedly
+flagged PawnIO, so install it only if you need those readings, and only from the official site.
 
 ## Licenses and trademarks
 

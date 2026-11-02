@@ -89,9 +89,8 @@
   - загрузка и частота каждого из 24 ядер (P- и E-ядра отдельно, до 12 компактных плиток в ряд), из счётчиков Windows `Processor Information`.
     Счётчики работают, только пока окно графиков открыто.
   - Температура каждого ядра (значение и оранжевая линия на плитке) берётся из цифровых датчиков процессора
-    (MSR 0x19C, TjMax из 0x1A2) через подписанный драйвер PawnIO. Сама программа драйверов не ставит: она использует
-    PawnIO, если его уже установила другая программа (CapFrameX, FanControl, LibreHardwareMonitor), а модуль IntelMSR
-    берёт из LibreHardwareMonitorLib.dll этой программы или из IntelMSR.bin рядом с exe. Только чтение; на этом ноутбуке
+    (MSR 0x19C, TjMax из 0x1A2) через подписанный драйвер PawnIO. Сама программа драйвер не ставит: она использует
+    PawnIO, если он есть, с модулем IntelMSR, встроенным в программу (файл IntelMSR.bin рядом с exe важнее). Только чтение;
     совпадает с Core Temp. Без PawnIO на плитках только загрузка и частота.
 - Все метрики по умолчанию обновляются раз в 2 с. «Настройки» → «Обновление метрик» меняет это от 0,1 до 10 с с шагом 0,1 с;
   графики и мини-графики показывают то же время (графики 5 мин, плитки ~80 с, оверлей 2 мин), только точек больше или меньше.
@@ -294,6 +293,34 @@ winget install JRSoftware.InnoSetup   # один раз
 автор не отвечает за повреждение оборудования, перегрев и другие последствия. Название «Alien Helper» и иконка
 для изменённых версий не лицензируются (GPL, раздел 7(e)). Подробности, товарные знаки и сторонние источники —
 в [NOTICE.md](NOTICE.md). Проект не связан с Dell Inc.; Alienware — товарный знак Dell Inc.
+
+## Компоненты и драйверы
+
+Входят в программу:
+
+| Компонент | Для чего | Лицензия | Ссылка |
+|---|---|---|---|
+| .NET 8 и Windows Desktop Runtime | среда выполнения и интерфейс | MIT | [dotnet.microsoft.com](https://dotnet.microsoft.com/) |
+| System.Management | доступ к WMI (прошивка, батарея, диски) | MIT | [dotnet/runtime](https://github.com/dotnet/runtime) |
+| System.Diagnostics.PerformanceCounter | счётчики процессора, дисков и питания | MIT | [dotnet/runtime](https://github.com/dotnet/runtime) |
+| Microsoft.Diagnostics.Tracing.TraceEvent | FPS и время кадра в оверлее | MIT | [microsoft/perfview](https://github.com/microsoft/perfview) |
+| Модуль IntelMSR для PawnIO | температуры ядер и общее потребление | LGPL-2.1 | [namazso/PawnIO.Modules](https://github.com/namazso/PawnIO.Modules) |
+
+Полный список зависимостей NuGet — в `THIRD-PARTY-NOTICES.txt`. Код AlienFX и AWCC основан на
+[alienfx-tools](https://github.com/T-Troll/alienfx-tools) (MIT). Установщик собран в
+[Inno Setup](https://jrsoftware.org/isinfo.php).
+
+Не входят в программу, используются, если есть в системе:
+
+| Компонент | Для чего | Откуда | Ссылка |
+|---|---|---|---|
+| NVML (`nvml.dll`), NVAPI | датчики и разгон видеокарты | драйвер NVIDIA | [NVML](https://developer.nvidia.com/management-library-nvml), [NVAPI](https://github.com/NVIDIA/nvapi) |
+| Драйвер PawnIO | чтение регистров процессора | необязательный, ставится отдельно | [pawnio.eu](https://pawnio.eu/) |
+| Интерфейс прошивки AWCC (`AWCCWmiMethodFunction`) | режимы и вентиляторы | прошивка ноутбука и драйверы Dell | [поддержка Dell](https://www.dell.com/support) |
+
+Программа не ставит драйверы. Без PawnIO она работает, но не показывает температуры ядер и общее потребление от сети.
+Установщик предлагает открыть страницу PawnIO, если драйвера нет. По сообщениям пользователей, некоторые античиты
+реагируют на PawnIO, поэтому ставьте его, только если эти показатели нужны, и только с официального сайта.
 
 ## Лицензии и товарные знаки
 
