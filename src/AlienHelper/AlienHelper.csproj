@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Assets\app.ico" LogicalName="AlienHelper.app.ico" />
+    <EmbeddedResource Include="Assets\IntelMSR.bin" LogicalName="AlienHelper.IntelMSR.bin" />
   </ItemGroup>
 
   <ItemGroup>

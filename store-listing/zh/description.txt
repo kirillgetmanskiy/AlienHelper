@@ -38,6 +38,15 @@ Alien Helper 是一款用于 Dell Alienware 笔记本的小巧控制程序。只
 
 Alien Helper 是独立项目，与 Dell Technologies Inc. 无隶属关系，未获其认可或赞助。Alienware、AlienFX、Alienware Command Center 和 Area-51 是 Dell Inc. 的商标，仅用于说明兼容的硬件。更改模式、风扇及超频的风险由您自行承担。
 
+组件和驱动程序
+• .NET 8 (MIT): https://dotnet.microsoft.com/
+• System.Management, System.Diagnostics.PerformanceCounter (MIT): https://github.com/dotnet/runtime
+• TraceEvent (MIT): https://github.com/microsoft/perfview
+• alienfx-tools (MIT): https://github.com/T-Troll/alienfx-tools
+• PawnIO IntelMSR module (LGPL-2.1): https://github.com/namazso/PawnIO.Modules
+• NVML, NVAPI (NVIDIA 驱动程序): https://developer.nvidia.com/management-library-nvml, https://github.com/NVIDIA/nvapi
+• PawnIO driver (可选，需单独安装): https://pawnio.eu/
+
 功能（每行一项）
 一键切换电源模式和 Alien Mode
 Custom 模式：自定义 CPU 和 GPU 风扇曲线

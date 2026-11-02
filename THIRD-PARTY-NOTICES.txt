@@ -59,6 +59,16 @@ This product includes or is based on the components listed below.
     SOFTWARE.
 
 
+1.3 IntelMSR module for PawnIO (Assets/IntelMSR.bin, built into AlienHelper.exe)
+    Copyright (c) namazso. GNU Lesser General Public License, version 2.1. Full text:
+      licenses/PawnIO.Modules-LICENSE.txt
+    Source code: https://github.com/namazso/PawnIO.Modules
+    The signed binary was taken unchanged from LibreHardwareMonitorLib.dll
+    (https://github.com/LibreHardwareMonitor/LibreHardwareMonitor).
+    To use another build of the module, put IntelMSR.bin next to AlienHelper.exe: it takes priority.
+    The PawnIO driver itself (https://pawnio.eu/) is not included.
+
+
 2. Code based on another project
 --------------------------------
 

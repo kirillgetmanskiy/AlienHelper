@@ -38,6 +38,15 @@ Alien Helper は Dell Alienware ノート PC 用のコンパクトな管理ア�
 
 Alien Helper は独立したプロジェクトであり、Dell Technologies Inc. とは提携・承認・後援の関係はありません。Alienware、AlienFX、Alienware Command Center、Area-51 は Dell Inc. の商標で、対応ハードウェアを示すためにのみ記載しています。モード、ファンの変更やオーバークロックは自己責任で行ってください。
 
+コンポーネントとドライバー
+• .NET 8 (MIT): https://dotnet.microsoft.com/
+• System.Management, System.Diagnostics.PerformanceCounter (MIT): https://github.com/dotnet/runtime
+• TraceEvent (MIT): https://github.com/microsoft/perfview
+• alienfx-tools (MIT): https://github.com/T-Troll/alienfx-tools
+• PawnIO IntelMSR module (LGPL-2.1): https://github.com/namazso/PawnIO.Modules
+• NVML, NVAPI (NVIDIA ドライバー): https://developer.nvidia.com/management-library-nvml, https://github.com/NVIDIA/nvapi
+• PawnIO driver (任意、別途インストール): https://pawnio.eu/
+
 機能（1 行に 1 つ）
 電源モードと Alien Mode をワンクリックで
 CPU と GPU の独自ファン カーブを使う Custom モード
