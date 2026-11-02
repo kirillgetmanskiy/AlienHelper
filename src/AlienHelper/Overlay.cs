@@ -94,7 +94,7 @@ public sealed class OverlayManager : IDisposable
             _frames.Start();
             _form.Reposition();
             _form.ShowNoActivate();
-            _mon.Want(this, Need.Mode | Need.Fans | Need.Cpu | Need.Gpu);
+            _mon.Want(this, Need.Mode | Need.Fans | Need.Cpu | Need.Gpu | Need.Power);
             RegisterMoveKeys();
         }
         else if (!show && Visible)
@@ -204,10 +204,11 @@ public sealed class OverlayForm : Form
     readonly FrameMonitor _frames;
     readonly System.Windows.Forms.Timer _fast = new() { Interval = 500 };
 
-    readonly List<float> _fps = new(), _cpu = new(), _gpu = new(), _cpuPwr = new(), _gpuPwr = new(), _vram = new(), _ram = new();
+    readonly List<float> _fps = new(), _cpu = new(), _gpu = new(), _cpuPwr = new(), _gpuPwr = new(), _allPwr = new(), _vram = new(), _ram = new();
     List<float> _frameTimes = new();
     FrameMonitor.Stats? _stats;
     readonly List<Row> _rows = new();
+    static readonly List<float> NoData = new();   // an empty graph for the frame rate rows outside games
     // widths only grow while a style is shown, so changing digits don't make items jump
     readonly Dictionary<string, int> _widths = new();
     // the last good value of each reading: a missed driver read keeps showing it instead of a dash or a missing row
@@ -301,11 +302,15 @@ public sealed class OverlayForm : Form
     void OnFrames()
     {
         _stats = _frames.Read();
-        Push(_fps, (float)(_stats?.Fps ?? 0), 120);
+        if (_game) Push(_fps, (float)(_stats?.Fps ?? 0), 120);
         _frameTimes = _stats?.FrameTimes.ToList() ?? new List<float>();
         _proc = _stats?.Process ?? (_frames.Error != null ? "ETW: " + _frames.Error : L.T("ov.noframes"));
         Rebuild();
     }
+
+    // the whole laptop as measured: PawnIO's platform counter, or the battery. The CPU + GPU estimate is not shown here:
+    // both parts already have their own rows.
+    bool TotalMeasured => _mon.PowerTotalW > 0 && _mon.PowerFrom is SensorMonitor.PowerSource.Platform or SensorMonitor.PowerSource.Battery;
 
     void OnSensors()
     {
@@ -316,6 +321,7 @@ public sealed class OverlayForm : Form
         var g = _mon.GpuInfo;
         if (g is { PowerW: > 0 }) Push(_gpuPwr, g.PowerW);
         if (_mon.CpuPowerW > 0) Push(_cpuPwr, _mon.CpuPowerW);
+        if (TotalMeasured) Push(_allPwr, _mon.PowerTotalW);
         if (g is { VramUsedGb: > 0 }) Push(_vram, g.VramUsedGb);
         var (ru, _) = SystemMemory.Read();
         if (ru > 0) Push(_ram, ru);
@@ -331,27 +337,28 @@ public sealed class OverlayForm : Form
         var snap = _mon.Last;
         string W = L.T("u.w"), GB = L.T("u.gb"), MS = L.T("u.ms");
 
-        // frame rate and frame time belong to games only: browsers, players and apps such as Electron ones present
-        // frames too, so they show only while a full-screen (exclusive or borderless) non-browser window is in front
+        // the rows stay in place so nothing moves when a game starts, but their values belong to games only: browsers,
+        // players and apps such as Electron ones present frames too, so numbers show only while a full-screen
+        // (exclusive or borderless) non-browser window is in front
         bool game = s != null && !OverlayManager.NotGames.Contains(s.Process) && OverlayManager.FullscreenGameInFront();
         if (game) _gameUntil = Environment.TickCount64 + 5000;
         else game = Environment.TickCount64 < _gameUntil;
         _game = game;
         float fpsMax = Math.Max(60, (_fps.Count > 0 ? _fps.Max() : 60) * 1.15f);
-        string fps = s == null ? "—" : $"{s.Fps:0}";
-        if (game) _rows.Add(new Row
+        string fps = !game || s == null ? "—" : $"{s.Fps:0}";
+        _rows.Add(new Row
         {
             Label = "FPS", Icon = OvIcon.Fps, Value = fps, Compact = fps, Big = true,
-            Extra = s is { Low1Fps: > 0 } ? $"1% low {s.Low1Fps:0}" : "",
-            Color = Good, History = _fps, Min = 0, Max = fpsMax, Wide = "888", WideExtra = "1% low 888",
+            Extra = game && s is { Low1Fps: > 0 } ? $"1% low {s.Low1Fps:0}" : "",
+            Color = Good, History = game ? _fps : NoData, Min = 0, Max = fpsMax, Wide = "888", WideExtra = "1% low 888",
         });
         float ftMax = _frameTimes.Count > 0 ? Math.Max(20, _frameTimes.OrderBy(x => x).ElementAt((int)(_frameTimes.Count * 0.99)) * 1.5f) : 33;
-        string frame = s is { FrameMs: > 0 } ? $"{s.FrameMs:0.0} {MS}" : "—";
-        if (game) _rows.Add(new Row
+        string frame = game && s is { FrameMs: > 0 } ? $"{s.FrameMs:0.0} {MS}" : "—";
+        _rows.Add(new Row
         {
             Label = L.T("ov.frame"), Icon = OvIcon.Frame, Value = frame, Compact = frame,
-            Extra = _frameTimes.Count > 0 ? L.T("ov.max", $"{_frameTimes.Max():0.0} {MS}") : "",
-            Color = Accent, History = _frameTimes, Min = 0, Max = ftMax, Bars = true,
+            Extra = game && _frameTimes.Count > 0 ? L.T("ov.max", $"{_frameTimes.Max():0.0} {MS}") : "",
+            Color = Accent, History = game ? _frameTimes : NoData, Min = 0, Max = ftMax, Bars = true,
             Wide = $"888.8 {MS}", WideExtra = L.T("ov.max", $"888.8 {MS}"),
         });
 
@@ -398,6 +405,12 @@ public sealed class OverlayForm : Form
             string v = $"{gpuW:0} {W}";
             _rows.Add(new Row { Label = "GPU " + W, Icon = OvIcon.Power, Value = v, Compact = v, StripText = "GPU " + v, Wide = $"GPU 888 {W}", Color = Hex("#FFD27A"), History = _gpuPwr, Min = 0, Max = Math.Max(60, _gpuPwr.DefaultIfEmpty(0).Max() * 1.1f) });
         }
+        float allW = Keep("all.w", _mon.PowerTotalW, TotalMeasured);
+        if (allW > 0)
+        {
+            string name = L.T("ov.total"), v = $"{allW:0} {W}";
+            _rows.Add(new Row { Label = name + " " + W, Icon = OvIcon.Power, Value = v, Compact = v, StripText = name + " " + v, Wide = $"{name} 888 {W}", Color = Warm, History = _allPwr, Min = 0, Max = Math.Max(100, _allPwr.DefaultIfEmpty(0).Max() * 1.1f) });
+        }
         // NVML misses the memory info now and then (e.g. while the GPU wakes up)
         float vramTotal = Keep("vram.total", g?.VramTotalGb ?? -1, g is { VramTotalGb: > 0 });
         if (vramTotal > 0)
@@ -420,7 +433,7 @@ public sealed class OverlayForm : Form
             int maxRpm = rpms.DefaultIfEmpty(-1).Max();
             _rows.Add(new Row
             {
-                Label = "FAN", Icon = OvIcon.Fan, Essential = false,
+                Label = "FAN", Icon = OvIcon.Fan,
                 Value = string.Join("  ", rpms.Select(rpm => rpm < 0 ? "—" : $"{rpm / 100 / 10.0:0.0}{L.T("u.k")}")),
                 Compact = maxRpm < 0 ? "—" : $"{maxRpm / 100 / 10.0:0.0}{L.T("u.k")}",
                 Wide = string.Join("  ", snap.Fans.Select(_ => $"88.8{L.T("u.k")}")),
@@ -428,7 +441,7 @@ public sealed class OverlayForm : Form
             var mode = _c.CurrentModeName(snap.Profile);
             _rows.Add(new Row
             {
-                Label = "MODE", Icon = OvIcon.Mode, Value = mode, Compact = mode, Essential = false,
+                Label = "MODE", Icon = OvIcon.Mode, Value = mode, Compact = mode, Wide = WidestMode(),
                 Color = _c.S.FanCurve ? Hex("#9B7BFF") : snap.Profile == Hardware.Awcc.ProfileGMode ? Warm : Accent,
             });
         }
@@ -453,6 +466,10 @@ public sealed class OverlayForm : Form
         if (ok) { _last[key] = value; return value; }
         return _last.TryGetValue(key, out float v) ? v : -1;
     }
+
+    /// <summary>The longest mode name, so the row keeps one width whichever mode is on.</summary>
+    string WidestMode() => (_c.Awcc?.Profiles.Select(p => _c.ProfileName(p)) ?? Array.Empty<string>()).Append("Custom")
+        .OrderByDescending(n => TextRenderer.MeasureText(n, ValueFont).Width).First();
 
     IEnumerable<Row> ShownRows => _style is 1 or 3 ? _rows.Where(r => r.Essential) : _rows;
 
@@ -492,7 +509,7 @@ public sealed class OverlayForm : Form
     {
         OvIcon.Vram or OvIcon.Ram => r.Wide.Split(" / ")[0] + " " + L.T("u.gb"),
         OvIcon.Fan => r.Wide.Split("  ")[0],
-        OvIcon.Power => r.Wide[4..],   // "CPU 888 W" without the name
+        OvIcon.Power => r.Wide[(r.Wide.IndexOf(' ') + 1)..],   // "CPU 888 W" without the name
         _ => r.Wide,
     };
 
