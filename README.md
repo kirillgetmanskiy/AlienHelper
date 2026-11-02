@@ -320,8 +320,8 @@ Not included, used when present on the system:
 | PawnIO driver | reads the CPU registers | optional, separate install | [pawnio.eu](https://pawnio.eu/) |
 | AWCC firmware interface (`AWCCWmiMethodFunction`) | modes and fans | laptop firmware and Dell drivers | [Dell support](https://www.dell.com/support) |
 
-The app installs no drivers. Without PawnIO it works, but shows no per-core temperatures and no total power on AC. The
-Setup installer offers to open the PawnIO page when the driver is missing. Some anti-cheat systems have reportedly
+The app installs no drivers. Without PawnIO it works, but shows no per-core temperatures, and on AC only the CPU + GPU sum
+instead of the total; the charts and the Power section then say so, with a link to PawnIO. The Setup installer offers to open the PawnIO page when the driver is missing. Some anti-cheat systems have reportedly
 flagged PawnIO, so install it only if you need those readings, and only from the official site.
 
 ## Licenses and trademarks

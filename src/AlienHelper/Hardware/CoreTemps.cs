@@ -24,6 +24,11 @@ public sealed class CoreTemps : IDisposable
     readonly CloseFn _close;
     readonly object _lock = new();
 
+    /// <summary>What <see cref="TryOpen"/> says when the driver is not in the system (the windows then recommend it).</summary>
+    public const string NotInstalled = "PawnIO driver not installed";
+    /// <summary>Screenshot mode ("nopawnio"): behave as if the driver were missing.</summary>
+    internal static bool PretendMissing;
+
     /// <summary>TjMax in °C (temperatures are TjMax minus the sensor's distance to it).</summary>
     public int TjMax { get; private set; }
     /// <summary>Where the module came from, for diagnostics.</summary>
@@ -38,8 +43,8 @@ public sealed class CoreTemps : IDisposable
         try
         {
             if (!IsIntel()) { why = "not an Intel CPU"; return null; }
-            var dir = PawnIoDir();
-            if (dir == null) { why = "PawnIO driver not installed"; return null; }
+            var dir = PretendMissing ? null : PawnIoDir();
+            if (dir == null) { why = NotInstalled; return null; }
             var libPath = Path.Combine(dir, "PawnIOLib.dll");
             if (!File.Exists(libPath)) libPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "PawnIO", "PawnIOLib.dll");
             if (!File.Exists(libPath) || !NativeLibrary.TryLoad(libPath, out var lib)) { why = "PawnIOLib.dll not found"; return null; }

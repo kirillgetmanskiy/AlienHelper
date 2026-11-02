@@ -50,6 +50,8 @@ public sealed class SensorMonitor : IDisposable
     /// Total draw, W: the battery's discharge rate on battery; on AC the Intel platform energy counter (RAPL PSYS,
     /// MSR 0x64D, read through PawnIO) — the whole platform, not just the CPU; CPU + GPU when neither is available.
     /// </summary>
+    /// <summary>The PawnIO driver is not in the system: no per-core temperatures, and no platform power on AC.</summary>
+    public bool PawnIoMissing => CoreTempsStatus == CoreTemps.NotInstalled;
     public List<float> PowerTotal { get; } = new();
     public float PowerTotalW { get; private set; } = -1;
     public enum PowerSource { None, Battery, Platform, CpuGpu }

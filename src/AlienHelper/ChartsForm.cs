@@ -26,6 +26,8 @@ public sealed class ChartsForm : Form
         AutoSize = false, ForeColor = Muted, Font = Theme.Font(8.5f), TextAlign = ContentAlignment.MiddleRight,
         Text = L.T("ch.coretemp"),
     };
+    readonly LinkLabel _pawnNotice = PawnIoNotice.Make("pawn.core");
+    bool _pawnShown;
     readonly Panel _coreHost = new() { BackColor = Bg };
     readonly Panel _scroll = new() { BackColor = Bg, Dock = DockStyle.Fill, AutoScroll = true };
     readonly List<CoreTile> _tiles = new();
@@ -59,7 +61,7 @@ public sealed class ChartsForm : Form
                 _fans.Series.Add(new Series { Name = $"{grp} {n}", Color = FanColors[i % FanColors.Length] });
             }
 
-        _scroll.Controls.AddRange(new Control[] { _temps, _fans, _clocks, _memory, _ssd, _ssdIo, _net, _coreHeader, _coreNote, _coreHost });
+        _scroll.Controls.AddRange(new Control[] { _temps, _fans, _clocks, _memory, _ssd, _ssdIo, _net, _coreHeader, _coreNote, _pawnNotice, _coreHost });
         Controls.Add(_scroll);
         _scroll.Resize += (_, _) => DoLayout();
         _mon.Updated += OnSample;
@@ -160,6 +162,11 @@ public sealed class ChartsForm : Form
         _coreHeader.SetBounds(m + S(2), y, w / 2, S(24));
         _coreNote.SetBounds(m + w / 2, y, w / 2, S(24));
         y += S(28);
+        if (_pawnShown)
+        {
+            _pawnNotice.SetBounds(m + S(2), y, w, S(22));
+            y += S(26);
+        }
 
         int th = Math.Clamp((vh - (y + _scroll.VerticalScroll.Value) - m - (rows - 1) * gap) / rows, minTile, S(200));
         int hostH = rows * th + (rows - 1) * gap;
@@ -174,6 +181,14 @@ public sealed class ChartsForm : Form
     void OnSample()
     {
         if (IsDisposed) return;
+        if (_mon.PawnIoMissing != _pawnShown)
+        {
+            // no driver: a recommendation in place of the note about the temperature line
+            _pawnShown = _mon.PawnIoMissing;
+            _pawnNotice.Visible = _pawnShown;
+            _coreNote.Visible = !_pawnShown;
+            DoLayout();
+        }
         // the refresh period can change in Settings: the same 5 minutes then hold a different number of points
         foreach (var ch in new[] { _temps, _fans, _clocks, _memory, _ssd, _ssdIo, _net }) { ch.Capacity = SensorMonitor.Capacity; ch.Phase = 0; }
         _glidePx = 0;
