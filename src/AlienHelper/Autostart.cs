@@ -34,7 +34,8 @@ public static class Autostart
         try
         {
             using var k = Registry.CurrentUser.CreateSubKey(RunKey);
-            k.SetValue(ValueName, $"\"{Environment.ProcessPath}\" --tray");
+            // the installed exe when there is one, so that running another copy never moves autostart to it
+            k.SetValue(ValueName, $"\"{InstalledExe() ?? Environment.ProcessPath}\" --tray");
             return true;
         }
         catch (Exception ex) { Log.Warn("autostart on: " + ex.Message); return false; }
@@ -89,6 +90,20 @@ public static class Autostart
             return p.ExitCode;
         }
         catch { return -1; }
+    }
+
+    /// <summary>The exe under the installer's folder, or null when the app is not installed or the file is gone.</summary>
+    static string? InstalledExe()
+    {
+        const string key = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\{6F3C2B1E-8A47-4D5C-9E21-A1E7F0B4C3D9}_is1";
+        try
+        {
+            using var k = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(key);
+            if (k?.GetValue("InstallLocation") is not string dir) return null;
+            string exe = Path.Combine(dir, "AlienHelper.exe");
+            return File.Exists(exe) ? exe : null;
+        }
+        catch { return null; }
     }
 
     static bool IsPackaged()
