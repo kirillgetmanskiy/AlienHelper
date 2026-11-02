@@ -70,14 +70,29 @@ public static class Autostart
     }
 
     /// <summary>
-    /// The exe the tasks start. In the MSIX package the install folder changes with every version and is not
-    /// meant to be started directly, so the tasks use the package's execution alias instead.
+    /// The exe the tasks start: the installed one when the app is installed, so that running another copy never
+    /// moves autostart to it. In the MSIX package the install folder changes with every version and is not meant
+    /// to be started directly, so the tasks use the package's execution alias instead.
     /// </summary>
     static string ExePath()
     {
-        if (!IsPackaged()) return Environment.ProcessPath!;
+        if (!IsPackaged()) return InstalledExe() ?? Environment.ProcessPath!;
         return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Microsoft", "WindowsApps", "AlienHelper.exe");
+    }
+
+    /// <summary>The exe under the installer's folder, or null when the app is not installed or the file is gone.</summary>
+    static string? InstalledExe()
+    {
+        const string key = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\{6F3C2B1E-8A47-4D5C-9E21-A1E7F0B4C3D9}_is1";
+        try
+        {
+            using var k = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(key);
+            if (k?.GetValue("InstallLocation") is not string dir) return null;
+            string exe = Path.Combine(dir, "AlienHelper.exe");
+            return File.Exists(exe) ? exe : null;
+        }
+        catch { return null; }
     }
 
     static bool IsPackaged()
