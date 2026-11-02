@@ -98,6 +98,7 @@ public sealed class Controller : IDisposable
     void BoostForMode(int p)
     {
         _lastProfile = p;
+        CheckLightsSoon();
         if (S.FanCurve) return;   // Custom (on any base, Alien Mode included): the fan curves set the boost
         // Alien Mode runs the fans flat out, Cool keeps them high (75 %), the other modes leave them to the BIOS curve
         int target = p == Awcc.ProfileGMode ? 100 : p == ProfileCool ? 75 : 0;
@@ -428,9 +429,9 @@ public sealed class Controller : IDisposable
     public void LightsOn() { S.LightsEnabled = true; S.Save(); ApplyLights(); }
 
     /// <summary>
-    /// Puts our lighting back over whatever AWCC's lighting agent wrote (it repaints after sign-in, unlock and sleep):
-    /// our colors, or dark when the lights are turned off here. A running animation repaints the keyboard by itself,
-    /// so then only the chassis is rewritten.
+    /// Puts our lighting back over whatever AWCC's lighting agent wrote (it repaints after sign-in, unlock, sleep and
+    /// mode changes): our colors, or dark when the lights are turned off here. An animation is sent in full and restarted
+    /// too: its fast frames do not stop a firmware effect the agent may have started.
     /// </summary>
     public void EnforceLights()
     {
@@ -441,10 +442,27 @@ public sealed class Controller : IDisposable
                 Keyboard?.SetBrightness(0, S.KeyboardLights);
                 Chassis?.SetBrightness(0, S.ChassisLights);
             }
-            else if (AnimationId == null) ApplyLights();
-            else SetChassis(ColorTranslator.FromHtml(S.ChassisColor), S.ChassisBrightness);
+            else ApplyLights();
         }
         catch (Exception ex) { Log.Warn("lights check: " + ex.Message); }
+    }
+
+    int _lightsCheck;
+
+    /// <summary>"Guard lighting from AWCC": a mode change can make the agent repaint, so ours follows it. The last change wins.</summary>
+    void CheckLightsSoon()
+    {
+        if (!S.GuardLights || (Keyboard == null && Chassis == null)) return;
+        int gen = Interlocked.Increment(ref _lightsCheck);
+        Task.Run(async () =>
+        {
+            foreach (int ms in new[] { 2000, 6000 })   // at 2 and 8 s
+            {
+                await Task.Delay(ms);
+                if (gen != Volatile.Read(ref _lightsCheck)) return;
+                EnforceLights();
+            }
+        });
     }
 
     public void ApplyLights()
