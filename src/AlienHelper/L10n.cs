@@ -124,6 +124,24 @@ public static class L
         ["ov.mode.on"] = new[] { "Всегда", "Always", "Toujours", "Siempre", "常に", "始终" },
         ["ov.mode.games"] = new[] { "В играх", "In games", "En jeu", "En juegos", "ゲーム中", "游戏中" },
         ["card.power"] = new[] { "Питание", "Power", "Alimentation", "Energía", "電源", "电源" },
+        ["pawn.core"] = new[]
+        {
+            "Пакет PawnIO не установлен, поэтому температуры ядер недоступны. Рекомендуем установить:",
+            "The PawnIO package is not installed, so per-core temperatures are unavailable. We recommend installing it:",
+            "Le paquet PawnIO n'est pas installé : les températures par cœur sont indisponibles. Nous recommandons de l'installer :",
+            "El paquete PawnIO no está instalado: las temperaturas por núcleo no están disponibles. Recomendamos instalarlo:",
+            "PawnIO パッケージがインストールされていないため、コアごとの温度は表示できません。インストールをおすすめします:",
+            "未安装 PawnIO 软件包，因此无法显示每核温度。建议安装：",
+        },
+        ["pawn.power"] = new[]
+        {
+            "Пакет PawnIO не установлен: от сети показана только сумма CPU + GPU, без экрана и других компонентов. Рекомендуем установить:",
+            "The PawnIO package is not installed: on AC only CPU + GPU is shown, without the display and other parts. We recommend installing it:",
+            "Le paquet PawnIO n'est pas installé : sur secteur, seule la somme CPU + GPU est affichée, sans l'écran ni les autres composants. Nous recommandons de l'installer :",
+            "El paquete PawnIO no está instalado: con corriente solo se muestra CPU + GPU, sin la pantalla ni otros componentes. Recomendamos instalarlo:",
+            "PawnIO パッケージがインストールされていないため、AC 電源では CPU + GPU の合計のみ表示します (画面などは含みません)。インストールをおすすめします:",
+            "未安装 PawnIO 软件包：交流供电时仅显示 CPU + GPU，不含屏幕等其他部件。建议安装：",
+        },
         ["pw.mode"] = new[] { "Режим Windows", "Windows mode", "Mode Windows", "Modo de Windows", "Windows モード", "Windows 模式" },
         ["pw.eff"] = new[] { "Экономия", "Efficiency", "Économie", "Ahorro", "省電力", "节能" },
         ["pw.bal"] = new[] { "Баланс", "Balanced", "Équilibré", "Equilibrado", "バランス", "平衡" },

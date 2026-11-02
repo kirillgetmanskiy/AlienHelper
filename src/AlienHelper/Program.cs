@@ -52,6 +52,7 @@ static class Program
         if (args.Length >= 2 && args[0] == "--screenshot")
         {
             int Arg(string name) => int.TryParse(args.FirstOrDefault(a => a.StartsWith(name + "="))?[(name.Length + 1)..], out var v) ? v : 0;
+            Hardware.CoreTemps.PretendMissing = args.Contains("nopawnio");
             return Screenshot(args[1], args.Contains("split"), args.FirstOrDefault(a => a.StartsWith("hide="))?[5..].Split(','), Arg("fakegpus"), Arg("fakedisks"), Arg("poll"), args.Contains("lite"), args.Contains("custom"), Arg("wait"));
         }
         if (args.Length >= 2 && args[0] == "--overlaytest") return OverlayTest(args[1]);

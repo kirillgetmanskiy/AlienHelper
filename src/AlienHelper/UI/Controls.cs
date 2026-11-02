@@ -851,3 +851,26 @@ public sealed class SmoothScroll : Panel, IMessageFilter
         }
     }
 }
+
+/// <summary>The notice shown where a reading needs the PawnIO driver and it is missing: the text and a link to its site.</summary>
+public static class PawnIoNotice
+{
+    const string Site = "pawnio.eu", Url = "https://pawnio.eu/";
+
+    public static LinkLabel Make(string textKey)
+    {
+        string text = L.T(textKey) + " ";
+        var l = new LinkLabel
+        {
+            Text = text + Site, Font = Theme.Font(9f), ForeColor = Warn, AutoSize = false, Visible = false,
+            LinkArea = new LinkArea(text.Length, Site.Length), LinkColor = Accent, ActiveLinkColor = Fg, VisitedLinkColor = Accent,
+            LinkBehavior = LinkBehavior.HoverUnderline,
+        };
+        l.LinkClicked += (_, _) =>
+        {
+            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Url) { UseShellExecute = true }); }
+            catch (Exception ex) { Log.Warn("open link: " + ex.Message); }
+        };
+        return l;
+    }
+}

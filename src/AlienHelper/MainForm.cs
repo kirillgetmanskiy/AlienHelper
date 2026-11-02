@@ -256,6 +256,8 @@ public sealed class MainForm : Form
     readonly Card _powerCard = new() { Caption = L.T("card.power") };
     readonly StatTile _power = new() { Title = L.T("card.power"), BigSize = 15f, HistoryBehind = true, Value = "—" };
     readonly List<PillButton> _powerModes = new();
+    readonly LinkLabel _pawnNotice = PawnIoNotice.Make("pawn.power");
+    bool _pawnShown;
 
     /// <summary>Power: the laptop's draw (measured on battery, CPU + GPU on AC) and the Windows power mode.</summary>
     int BuildPower(int y)
@@ -287,6 +289,9 @@ public sealed class MainForm : Form
         }
         cy += S(26) + S(6);
         _powerCard.SetBounds(S(M), y, CardW, cy + S(4));
+        int noteH = TextRenderer.MeasureText(_pawnNotice.Text, _pawnNotice.Font, new Size(Inner, 0), TextFormatFlags.WordBreak).Height + S(4);
+        _pawnNotice.SetBounds(S(Pad), cy, Inner, noteH);
+        _powerCard.Controls.Add(_pawnNotice);
         SyncPowerModes();
         return _powerCard.Bottom + S(Gap);
     }
@@ -306,6 +311,14 @@ public sealed class MainForm : Form
     void UpdatePower()
     {
         if (_c.S.HiddenCards.Contains("power")) return;
+        if (_mon.PawnIoMissing != _pawnShown)
+        {
+            // without the driver the total on AC is only CPU + GPU: say so and recommend it
+            _pawnShown = _mon.PawnIoMissing;
+            _pawnNotice.Visible = _pawnShown;
+            _powerCard.Height += (_pawnShown ? 1 : -1) * (_pawnNotice.Height + S(4));
+            Reflow();
+        }
         var b = _mon.Battery;
         float w = _mon.PowerTotalW;
         if (b is { OnAc: false })
