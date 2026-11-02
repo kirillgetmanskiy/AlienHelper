@@ -254,12 +254,12 @@ public static class L
         ["opt.guardlights"] = new[] { "Защищать подсветку от AWCC", "Guard lighting from AWCC", "Protéger l'éclairage d'AWCC", "Proteger la iluminación de AWCC", "ライティングを AWCC から守る", "防止 AWCC 更改灯光" },
         ["opt.guardlights.tip"] = new[]
         {
-            "Alienware Command Center иногда сам включает подсветку. После входа, разблокировки и выхода из сна программа несколько раз в течение минуты возвращает свою подсветку (или выключенную, если она выключена здесь).",
-            "Alienware Command Center sometimes turns the lighting on by itself. After sign-in, unlock and sleep the app puts its own lighting back several times over a minute (or keeps it off if it is off here).",
-            "Alienware Command Center rallume parfois l'éclairage de lui-même. Après la connexion, le déverrouillage et la veille, l'application rétablit son éclairage plusieurs fois pendant une minute (ou le garde éteint s'il est éteint ici).",
-            "Alienware Command Center a veces enciende la iluminación por su cuenta. Tras iniciar sesión, desbloquear y salir de la suspensión, la aplicación restaura su iluminación varias veces durante un minuto (o la mantiene apagada si aquí está apagada).",
-            "Alienware Command Center は時々ライティングを勝手にオンにします。サインイン、ロック解除、スリープ解除の後、アプリは 1 分間に数回自分のライティングを戻します (ここでオフならオフのまま)。",
-            "Alienware Command Center 有时会自行打开灯光。登录、解锁和从睡眠唤醒后，应用会在一分钟内多次恢复自己的灯光 (如果这里关闭了灯光，则保持关闭)。",
+            "Alienware Command Center иногда сам включает подсветку. После входа, разблокировки, выхода из сна и смены режима программа несколько раз в течение минуты возвращает свою подсветку (или выключенную, если она выключена здесь).",
+            "Alienware Command Center sometimes turns the lighting on by itself. After sign-in, unlock, sleep and mode changes the app puts its own lighting back several times over a minute (or keeps it off if it is off here).",
+            "Alienware Command Center rallume parfois l'éclairage de lui-même. Après la connexion, le déverrouillage, la veille et les changements de mode, l'application rétablit son éclairage plusieurs fois pendant une minute (ou le garde éteint s'il est éteint ici).",
+            "Alienware Command Center a veces enciende la iluminación por su cuenta. Tras iniciar sesión, desbloquear, salir de la suspensión y cambiar de modo, la aplicación restaura su iluminación varias veces durante un minuto (o la mantiene apagada si aquí está apagada).",
+            "Alienware Command Center は時々ライティングを勝手にオンにします。サインイン、ロック解除、スリープ解除、モード変更の後、アプリは 1 分間に数回自分のライティングを戻します (ここでオフならオフのまま)。",
+            "Alienware Command Center 有时会自行打开灯光。登录、解锁、从睡眠唤醒和切换模式后，应用会在一分钟内多次恢复自己的灯光 (如果这里关闭了灯光，则保持关闭)。",
         },
         ["opt.apply"] = new[]
         {
