@@ -142,6 +142,7 @@ public static class L
             "PawnIO パッケージがインストールされていないため、AC 電源では CPU + GPU の合計のみ表示します (画面などは含みません)。インストールをおすすめします:",
             "未安装 PawnIO 软件包：交流供电时仅显示 CPU + GPU，不含屏幕等其他部件。建议安装：",
         },
+        ["ov.total"] = new[] { "Всего", "Total", "Total", "Total", "合計", "总计" },
         ["pw.mode"] = new[] { "Режим Windows", "Windows mode", "Mode Windows", "Modo de Windows", "Windows モード", "Windows 模式" },
         ["pw.eff"] = new[] { "Экономия", "Efficiency", "Économie", "Ahorro", "省電力", "节能" },
         ["pw.bal"] = new[] { "Баланс", "Balanced", "Équilibré", "Equilibrado", "バランス", "平衡" },
