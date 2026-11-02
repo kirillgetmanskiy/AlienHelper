@@ -123,10 +123,88 @@ begin
     SetupMessage(msgInfoBeforeLabel), CustomMessage('Disclaimer'));
 end;
 
+const
+  // Inno writes the uninstall entry under the AppId ({...}) plus "_is1"
+  UninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{6F3C2B1E-8A47-4D5C-9E21-A1E7F0B4C3D9}_is1';
+  // scheduled tasks the app creates (see Autostart.cs); the old uninstaller deletes them
+  TaskNames = 'AlienHelper,AlienHelper-NoUAC';
+
+var
+  TasksSaved: Boolean;
+
+function TaskFile(const Name: String): String;
+begin
+  Result := ExpandConstant('{tmp}\task-' + Name + '.xml');
+end;
+
+procedure RunPowerShell(const Script: String);
+var
+  Code: Integer;
+begin
+  Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+    '-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "' + Script + '"', '', SW_HIDE, ewWaitUntilTerminated, Code);
+end;
+
+// Saves the autostart / no-UAC tasks so they survive removing the old version; RestoreTasks points them at
+// the installed exe, or they would keep starting whatever copy created them.
+procedure SaveTasks();
+var
+  Names: TArrayOfString;
+  I: Integer;
+begin
+  Names := StringSplit(TaskNames, [','], stAll);
+  for I := 0 to GetArrayLength(Names) - 1 do
+    RunPowerShell('$t = Get-ScheduledTask -TaskPath ''\'' -TaskName ''' + Names[I] + ''' -ErrorAction SilentlyContinue; ' +
+      'if ($t) { Export-ScheduledTask -InputObject $t | Set-Content -Encoding Unicode -LiteralPath ''' + TaskFile(Names[I]) + ''' }');
+  TasksSaved := True;
+end;
+
+procedure RestoreTasks();
+var
+  Names: TArrayOfString;
+  I: Integer;
+begin
+  if not TasksSaved then Exit;
+  Names := StringSplit(TaskNames, [','], stAll);
+  for I := 0 to GetArrayLength(Names) - 1 do
+    if FileExists(TaskFile(Names[I])) then
+      RunPowerShell('Register-ScheduledTask -TaskPath ''\'' -TaskName ''' + Names[I] + ''' -Force ' +
+        '-Xml ((Get-Content -Raw -LiteralPath ''' + TaskFile(Names[I]) + ''') -replace ''<Command>.*?</Command>'', ''<Command>' +
+        ExpandConstant('{app}\{#AppExe}') + '</Command>'') | Out-Null');
+end;
+
+// Removes an installed older (or the same) version with its own uninstaller, shortcuts included,
+// so a renamed shortcut ("AlienHelper" -> "Alien Helper") doesn't stay behind. Settings are kept.
+procedure UninstallPrevious();
+var
+  Uninst, Dir: String;
+  Code, I: Integer;
+begin
+  if not RegQueryStringValue(HKA, UninstallKey, 'UninstallString', Uninst) then Exit;
+  Uninst := RemoveQuotes(Uninst);
+  if not FileExists(Uninst) then Exit;
+  if RegQueryStringValue(HKA, UninstallKey, 'InstallLocation', Dir) then
+    CloseApp(AddBackslash(RemoveQuotes(Dir)) + '{#AppExe}');
+  SaveTasks();
+  Exec(Uninst, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, Code);
+  // the uninstaller finishes in a second process: wait until it has removed itself
+  for I := 1 to 60 do
+  begin
+    if not FileExists(Uninst) then Break;
+    Sleep(250);
+  end;
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   CloseApp(ExpandConstant('{app}\{#AppExe}'));
+  UninstallPrevious();
   Result := '';
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then RestoreTasks();
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
