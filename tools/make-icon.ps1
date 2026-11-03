@@ -77,10 +77,22 @@ $prev.Dispose()
 # MSIX logos (installer\msix\Package.appxmanifest)
 $msix = Join-Path $root 'src\AlienHelper\Assets\Msix'
 New-Item -ItemType Directory -Force $msix | Out-Null
-foreach ($l in @(@{ n = 'Square44x44Logo'; s = 44 }, @{ n = 'Square150x150Logo'; s = 150 }, @{ n = 'StoreLogo'; s = 50 })) {
-    $b = Draw-Icon $l.s
-    $b.Save((Join-Path $msix "$($l.n).png"), [System.Drawing.Imaging.ImageFormat]::Png)
+Get-ChildItem $msix -Filter '*.png' | Remove-Item
+function Save-Logo([string]$name, [int]$s) {
+    $b = Draw-Icon $s
+    $b.Save((Join-Path $msix $name), [System.Drawing.Imaging.ImageFormat]::Png)
     $b.Dispose()
+}
+foreach ($l in @(@{ n = 'Square44x44Logo'; s = 44 }, @{ n = 'Square150x150Logo'; s = 150 }, @{ n = 'StoreLogo'; s = 50 })) {
+    Save-Logo "$($l.n).png" $l.s
+    foreach ($scale in 100, 125, 150, 200, 400) { Save-Logo "$($l.n).scale-$scale.png" ([int][Math]::Round($l.s * $scale / 100)) }
+}
+# taskbar, Start and Alt+Tab icons: drawn at the exact size, and "unplated" so Windows shows the tile as it is instead of
+# shrinking the 44 px logo onto an accent-coloured plate. resources.pri (build-msix.ps1) lets Windows pick them.
+foreach ($t in 16, 20, 24, 30, 32, 36, 40, 48, 60, 64, 72, 80, 96, 256) {
+    Save-Logo "Square44x44Logo.targetsize-$t.png" $t
+    Save-Logo "Square44x44Logo.targetsize-$($t)_altform-unplated.png" $t
+    Save-Logo "Square44x44Logo.targetsize-$($t)_altform-lightunplated.png" $t
 }
 # Microsoft Store listing: 1:1 app tile icons (Partner Center → Store listing → Store logos)
 $store = Join-Path $root 'store-listing\icons'
