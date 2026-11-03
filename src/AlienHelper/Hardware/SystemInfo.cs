@@ -22,6 +22,9 @@ public static class SystemInfo
 
     public static string Manufacturer => _info.Value.maker;
     public static string Model => _info.Value.model;
+    /// <summary>A Dell or Alienware laptop: only there do the AWCC options (guard, turn off, hold GPU power) mean anything.</summary>
+    public static bool IsDell => Manufacturer.Contains("Dell", StringComparison.OrdinalIgnoreCase)
+        || Manufacturer.Contains("Alienware", StringComparison.OrdinalIgnoreCase) || Model.Contains("Alienware", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Model name without the model code, e.g. "Alienware 16 Area-51".</summary>
     public static string DisplayModel

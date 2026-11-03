@@ -270,13 +270,15 @@ public sealed class SettingsForm : Form
         apply.Toggled += (_, _) => { _c.S.ApplyOnStart = apply.On; _c.S.Save(); };
         var minimized = AddToggle(card, ref cy, new Toggle(L.T("opt.minimized")) { On = _c.S.StartMinimized });
         minimized.Toggled += (_, _) => { _c.S.StartMinimized = minimized.On; _c.S.Save(); };
-        if (_c.Keyboard != null || _c.Chassis != null)
+        // the AWCC options exist only on Dell / Alienware laptops; elsewhere AWCC is not there to interfere
+        bool dell = Hardware.SystemInfo.IsDell;
+        if (dell && (_c.Keyboard != null || _c.Chassis != null))
         {
             var guard = AddToggle(card, ref cy, new Toggle(L.T("opt.guardlights")) { On = _c.S.GuardLights });
             guard.Toggled += (_, _) => { _c.S.GuardLights = guard.On; _c.S.Save(); if (guard.On) Task.Run(_c.EnforceLights); };
             new ToolTip { AutoPopDelay = 15000, InitialDelay = 300 }.SetToolTip(guard, L.T("opt.guardlights.tip"));
         }
-        if (AwccService.Installed)
+        if (dell && AwccService.Installed)
         {
             var awcc = AddToggle(card, ref cy, new Toggle(L.T("opt.awccoff")) { Enabled = !Launcher.IsLimited, On = AwccService.IsOff });
             new ToolTip { AutoPopDelay = 20000, InitialDelay = 300 }.SetToolTip(awcc, L.T("opt.awccoff.tip"));
@@ -293,7 +295,7 @@ public sealed class SettingsForm : Form
                 if (!ok) MessageBox.Show(this, L.T("err.awcc"), Log.AppTitle);
             };
         }
-        if (_c.Awcc?.Profiles.Contains(Hardware.Awcc.ProfileGMode) == true)
+        if (dell && _c.Awcc?.Profiles.Contains(Hardware.Awcc.ProfileGMode) == true)
         {
             var hold = AddToggle(card, ref cy, new Toggle(L.T("opt.holdgpu")) { On = _c.S.HoldGpuPower });
             hold.Toggled += (_, _) => { _c.S.HoldGpuPower = hold.On; _c.S.Save(); };
