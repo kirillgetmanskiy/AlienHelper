@@ -62,7 +62,9 @@ public sealed class ModeOsd : Form
 
     protected override void OnPaint(PaintEventArgs e)
     {
-        using var dark = Theme.Use(Theme.Look.Dark);   // shown over games: always dark
+        using var dark = Theme.UseOverlay();   // shown over games: dark unless the theme covers the overlay
+        var back = Theme.Current.IsFile ? OverlayBack : Color.FromArgb(14, 16, 20);
+        if (BackColor != back) BackColor = back;
         var g = e.Graphics;
         Smooth(g);
         var accent = _alien ? Warm : Accent;

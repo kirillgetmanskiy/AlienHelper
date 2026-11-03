@@ -89,10 +89,11 @@ public sealed class MainForm : Form
         var sub = new Label { Text = SystemInfo.DisplayModel, Font = Theme.Font(8.5f), ForeColor = Muted, AutoSize = true };
         sub.Location = new Point(S(M) + title.PreferredWidth + S(6), y + (title.PreferredHeight - sub.PreferredHeight) / 2 + S(1));
         Controls.Add(sub);
+        Label? codeLbl = null;
         if (SystemInfo.ModelCode is { Length: > 0 } code)
         {
             // model code highlighted in brackets, e.g. "(AA16250)"
-            var codeLbl = new Label { Text = $"({code})", Font = Semibold(8.5f), ForeColor = Accent, AutoSize = true };
+            codeLbl = new Label { Text = $"({code})", Font = Semibold(8.5f), ForeColor = Accent, AutoSize = true };
             codeLbl.Location = new Point(sub.Left + sub.PreferredWidth, sub.Top);
             Controls.Add(codeLbl);
         }
@@ -106,6 +107,15 @@ public sealed class MainForm : Form
         _tips.SetToolTip(charts, L.T("btn.charts"));
         charts.Click += (_, _) => _openCharts();
         Controls.Add(charts);
+        // a wide font (a theme file may name one) must not run the model under the buttons: it ends in "…" instead
+        int room = charts.Left - S(8) - sub.Left, codeW = codeLbl?.PreferredWidth ?? 0;
+        if (sub.PreferredWidth + codeW > room)
+        {
+            sub.AutoSize = false;
+            sub.AutoEllipsis = true;
+            sub.Size = new Size(Math.Max(0, room - codeW), sub.PreferredHeight);
+            if (codeLbl != null) codeLbl.Left = sub.Right;
+        }
         return y + Math.Max(title.PreferredHeight, gear.Height) + S(6);
     }
 
@@ -468,7 +478,7 @@ public sealed class MainForm : Form
         }
         // Custom: its own mode, the fans follow the curves
         int ci = a.Profiles.Count;
-        _customMode.AccentColor = Hex("#9B7BFF");
+        _customMode.AccentColor = Extra;
         _customMode.Bounds = new Rectangle(S(Pad) + (ci % cols) * (bw + S(Gap)), cy + (ci / cols) * (bh + S(5)), bw, bh);
         _tips.SetToolTip(_customMode, L.T("boost.custom.tip"));
         _customMode.Click += async (_, _) =>
@@ -534,7 +544,7 @@ public sealed class MainForm : Form
     readonly PillButton _split = new(L.T("boost.split")) { Subtle = true };
     readonly PillButton _customMode = new("Custom");
     readonly PillButton _curvesBtn = new(L.T("curves.btn")) { Subtle = true };
-    readonly PillButton _ocBtn = new("Overclock") { Subtle = true, AccentColor = Hex("#FF6A3D") };
+    readonly PillButton _ocBtn = new("Overclock") { Subtle = true, AccentColor = Warm };
 
     /// <summary>Opens the fan curve editor (set by the tray app).</summary>
     public Action? OpenCurves { get; set; }
@@ -811,7 +821,7 @@ public sealed class MainForm : Form
         _cpu.History = _mon.Cpu.Recent(80);
         _cpu.Lines.Clear();
         _cpu.Lines.Add((_mon.CpuPower.Recent(80), Warn, L.T("u.w")));
-        _cpu.Lines.Add((_mon.PClock.Recent(80), Hex("#9B7BFF"), L.T("u.ghz")));
+        _cpu.Lines.Add((_mon.PClock.Recent(80), Extra, L.T("u.ghz")));
         var cpuSub = new List<string>();
         if (_mon.CpuLoad >= 0) cpuSub.Add($"{_mon.CpuLoad:0}%");
         if (_mon.PClockMhz > 0) cpuSub.Add($"{_mon.PClockMhz / 1000:0.0} {L.T("u.ghz")}");
@@ -837,7 +847,7 @@ public sealed class MainForm : Form
             if (gd != null)
             {
                 main.Lines.Add((gd.Power.Recent(80), Warn, L.T("u.w")));
-                main.Lines.Add((gd.Clock.Recent(80), Hex("#9B7BFF"), L.T("u.ghz")));
+                main.Lines.Add((gd.Clock.Recent(80), Extra, L.T("u.ghz")));
             }
             var sub = new List<string>();
             if (g != null)

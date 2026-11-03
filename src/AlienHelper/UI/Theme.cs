@@ -6,25 +6,44 @@ namespace AlienHelper.UI;
 
 public static class Theme
 {
-    /// <summary>The app's looks; chosen in Settings, applied before windows are (re)created.</summary>
+    /// <summary>The built-in looks; chosen in Settings, applied before windows are (re)created.</summary>
     public enum Look { Dark, Light, Strict }
 
-    sealed record Palette(Color Bg, Color Card, Color CardHi, Color Border, Color Track, Color Fg, Color Muted,
-        Color Accent, Color Warm, Color Good, Color Warn);
+    /// <summary>A theme's colors. <see cref="Extra"/> is the second data color (E-cores, VRAM, Custom mode).</summary>
+    public sealed record Palette(Color Bg, Color Card, Color CardHi, Color Border, Color Track, Color Fg, Color Muted,
+        Color Accent, Color Warm, Color Good, Color Warn, Color Extra);
+
+    /// <summary>
+    /// One theme: a built-in look, or one loaded from a file (<see cref="ThemeFiles"/>). <see cref="Tint"/> recolors
+    /// every data series (charts, overlay rows) to its hue, for one-color themes; <see cref="Overlay"/> lets the game
+    /// overlay and the mode hint use the theme too (built-in looks keep them dark).
+    /// </summary>
+    public sealed record Def(string Key, Look Base, Palette P, bool SquareCorners = false, string? FontFamily = null,
+        Color? Tint = null, bool Overlay = false)
+    {
+        public bool IsFile => Key.StartsWith(ThemeFiles.Prefix, StringComparison.Ordinal);
+        /// <summary>Name shown in Settings: the built-in look's translated name, or the file's own name.</summary>
+        public string Title { get; init; } = "";
+    }
 
     static readonly Dictionary<Look, Palette> Palettes = new()
     {
         [Look.Dark] = new(Hex("#0E1014"), Hex("#171A20"), Hex("#1F232B"), Hex("#262B34"), Hex("#2A303B"),
-            Hex("#E8EAED"), Hex("#8A93A3"), Hex("#1FB6FF"), Hex("#FF6A3D"), Hex("#3DDC97"), Hex("#FFC14D")),
+            Hex("#E8EAED"), Hex("#8A93A3"), Hex("#1FB6FF"), Hex("#FF6A3D"), Hex("#3DDC97"), Hex("#FFC14D"), Hex("#9B7BFF")),
         // same layout on light surfaces; accents darkened enough to read on white
         [Look.Light] = new(Hex("#EEF0F3"), Hex("#FFFFFF"), Hex("#F2F4F7"), Hex("#D8DDE4"), Hex("#D3D9E1"),
-            Hex("#1A1D22"), Hex("#66707E"), Hex("#0A84E0"), Hex("#E2542A"), Hex("#139A62"), Hex("#C98A00")),
+            Hex("#1A1D22"), Hex("#66707E"), Hex("#0A84E0"), Hex("#E2542A"), Hex("#139A62"), Hex("#C98A00"), Hex("#9B7BFF")),
         // plain graphite, square corners, flat fills, quieter accent
         [Look.Strict] = new(Hex("#161616"), Hex("#1F1F1F"), Hex("#2A2A2A"), Hex("#383838"), Hex("#3C3C3C"),
-            Hex("#ECECEC"), Hex("#9A9A9A"), Hex("#5AA0E6"), Hex("#E2683C"), Hex("#4CC38A"), Hex("#E0B040")),
+            Hex("#ECECEC"), Hex("#9A9A9A"), Hex("#5AA0E6"), Hex("#E2683C"), Hex("#4CC38A"), Hex("#E0B040"), Hex("#9B7BFF")),
     };
 
-    public static Look Current { get; private set; } = Look.Dark;
+    /// <summary>The colors of a built-in look: the defaults a theme file starts from.</summary>
+    public static Palette BuiltIn(Look l) => Palettes[l];
+
+    public static Def Builtin(Look l) => new(Name(l), l, Palettes[l], SquareCorners: l == Look.Strict);
+
+    public static Def Current { get; private set; } = Builtin(Look.Dark);
     public static Color Bg { get; private set; }
     public static Color Card { get; private set; }
     public static Color CardHi { get; private set; }
@@ -36,40 +55,85 @@ public static class Theme
     public static Color Warm { get; private set; }
     public static Color Good { get; private set; }
     public static Color Warn { get; private set; }
+    public static Color Extra { get; private set; }
+    static string _family = "Segoe UI";
 
     /// <summary>Main window shows current values only: no sparklines, compact tiles (Settings → Main window).</summary>
     public static bool NumbersOnly { get; set; }
 
-    static Theme() { Set(Look.Dark); }
+    static Theme() { Set(Builtin(Look.Dark)); }
 
-    static void Set(Look look)
+    static void Set(Def d)
     {
-        var p = Palettes[look];
-        Current = look;
-        (Bg, Card, CardHi, Border, Track, Fg, Muted, Accent, Warm, Good, Warn) =
-            (p.Bg, p.Card, p.CardHi, p.Border, p.Track, p.Fg, p.Muted, p.Accent, p.Warm, p.Good, p.Warn);
+        var p = d.P;
+        Current = d;
+        (Bg, Card, CardHi, Border, Track, Fg, Muted, Accent, Warm, Good, Warn, Extra) =
+            (p.Bg, p.Card, p.CardHi, p.Border, p.Track, p.Fg, p.Muted, p.Accent, p.Warm, p.Good, p.Warn, p.Extra);
+        _family = d.FontFamily ?? "Segoe UI";
     }
 
-    /// <summary>Applies a look by its settings name ("dark", "light", "strict").</summary>
-    public static void Apply(string? name) => Set(name switch { "light" => Look.Light, "strict" => Look.Strict, _ => Look.Dark });
+    /// <summary>
+    /// Applies a theme by its settings name: "dark", "light", "strict", or "file:&lt;name&gt;" for a theme file. A file
+    /// that is gone or unreadable falls back to the dark look (and says why in the log).
+    /// </summary>
+    public static void Apply(string? name)
+    {
+        if (name != null && name.StartsWith(ThemeFiles.Prefix, StringComparison.Ordinal))
+        {
+            var d = ThemeFiles.Load(name[ThemeFiles.Prefix.Length..], out var error);
+            if (d != null) { Set(d); return; }
+            Log.Warn($"theme '{name}': {error}; using the dark one");
+            Set(Builtin(Look.Dark));
+            return;
+        }
+        Set(Builtin(name switch { "light" => Look.Light, "strict" => Look.Strict, _ => Look.Dark }));
+    }
 
     public static string Name(Look l) => l.ToString().ToLowerInvariant();
 
-    public static bool IsDark => Current != Look.Light;
+    public static bool IsDark => Current.Base != Look.Light;
     /// <summary>Slider and switch knobs: light text color on dark looks, white on the light one.</summary>
     public static Color Knob => IsDark ? Fg : Color.White;
-    /// <summary>Strict look: square corners and flat fills.</summary>
-    public static bool Square => Current == Look.Strict;
+    /// <summary>Strict look (and themes that ask for it): square corners and flat fills.</summary>
+    public static bool Square => Current.SquareCorners;
 
     /// <summary>
-    /// Paints with another look for a moment (UI thread only). The game overlay and the mode hint always use the dark
-    /// look: they sit over games, where a light panel would glare.
+    /// Paints the game overlay or the mode hint (UI thread only). They sit over games, where a light panel would glare,
+    /// so they use the dark look, unless the theme is a dark one that asks to cover them too.
     /// </summary>
-    public static IDisposable Use(Look look)
+    public static IDisposable UseOverlay()
     {
         var was = Current;
-        Set(look);
+        if (!(was.Overlay && IsDark)) Set(Builtin(Look.Dark));
         return new Restore(() => Set(was));
+    }
+
+    /// <summary>Background of the overlay windows (call inside <see cref="UseOverlay"/>).</summary>
+    public static Color OverlayBack => Current.IsFile ? Blend(Bg, Color.Black, 0.25f) : Color.FromArgb(10, 12, 16);
+
+    /// <summary>
+    /// A data series color (charts, overlay rows). Unchanged, unless the theme has a tint: then it takes the tint's hue
+    /// and keeps its own lightness, so series stay apart in a one-color theme.
+    /// </summary>
+    public static Color Data(Color c)
+    {
+        if (Current.Tint is not { } t) return c;
+        float l = c.GetBrightness();
+        return FromHsl(t.GetHue(), Math.Min(t.GetSaturation(), 0.85f), Math.Clamp(l, 0.35f, 0.8f), c.A);
+    }
+
+    public static Color Data(string hex) => Data(Hex(hex));
+
+    static Color FromHsl(float h, float s, float l, int a)
+    {
+        float q = l < 0.5f ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+        float Hue(float t)
+        {
+            if (t < 0) t += 1; if (t > 1) t -= 1;
+            return t < 1 / 6f ? p + (q - p) * 6 * t : t < 0.5f ? q : t < 2 / 3f ? p + (q - p) * (2 / 3f - t) * 6 : p;
+        }
+        float k = h / 360f;
+        return Color.FromArgb(a, (int)(Hue(k + 1 / 3f) * 255), (int)(Hue(k) * 255), (int)(Hue(k - 1 / 3f) * 255));
     }
 
     sealed class Restore(Action undo) : IDisposable { public void Dispose() => undo(); }
@@ -98,8 +162,10 @@ public static class Theme
     public static int S(int v) => (int)Math.Round(v * Scale);
     public static float Sf(float v) => v * Scale;
 
-    public static Font Font(float pt, FontStyle st = FontStyle.Regular) => new("Segoe UI", pt, st);
-    public static Font Semibold(float pt) => new("Segoe UI Semibold", pt);
+    /// <summary>The font family of the theme in use (Segoe UI unless a theme file names another).</summary>
+    public static string Family => _family;
+    public static Font Font(float pt, FontStyle st = FontStyle.Regular) => new(_family, pt, st);
+    public static Font Semibold(float pt) => _family == "Segoe UI" ? new("Segoe UI Semibold", pt) : new(_family, pt, FontStyle.Bold);
 
     public static Color Hex(string h) => ColorTranslator.FromHtml(h);
 

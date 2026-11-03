@@ -66,6 +66,9 @@ Alien Helper is free and open source. If it is useful to you, you can support it
 - Themes (**Settings** → **Theme**): **Dark** (default), **Light** (the same design on light surfaces) and **Strict**
   (graphite, square corners and knobs, flat fills without gradients). The title bar and tray menu follow the theme;
   the game overlay and the mode hint stay dark in every theme so they do not glare over games.
+- Themes from files: anyone can make one (a small `.json` with colors, and optionally a font, square corners and a tint
+  for one-color themes) and add it in **Settings** → **Theme** → **Add theme…**; **Save current as file…** gives a
+  template. Format and ready themes: [`themes/`](themes/README.md). They are not built into the app.
 - Key lighting editor (the **Keys** button in the **Lighting** card): the keyboard is drawn on screen;
   left click paints a key (you can drag), right click turns it off; palette, brightness, **Fill all**, **Clear**.
   Templates in the **Template** drop-down (with color previews): WASD, FPS, MOBA, Cat (^_^ on E-4-R, T-Y, U-8-I), Heart, Rainbow, Fire, Ocean.

@@ -165,6 +165,28 @@ public static class L
         ["u.h"] = new[] { "ч", "h", "h", "h", "時間", "小时" },
         ["u.min"] = new[] { "мин", "min", "min", "min", "分", "分钟" },
         ["opt.theme"] = new[] { "Тема", "Theme", "Thème", "Tema", "テーマ", "主题" },
+        ["theme.add"] = new[] { "Добавить тему…", "Add theme…", "Ajouter un thème…", "Añadir tema…", "テーマを追加…", "添加主题…" },
+        ["theme.folder"] = new[] { "Папка тем", "Themes folder", "Dossier des thèmes", "Carpeta de temas", "テーマ フォルダー", "主题文件夹" },
+        ["theme.export"] = new[] { "Сохранить текущую в файл…", "Save current as file…", "Enregistrer le thème actuel…", "Guardar el actual como archivo…", "現在のテーマをファイルに保存…", "将当前主题保存为文件…" },
+        ["theme.filter"] = new[] { "Тема Alien Helper", "Alien Helper theme", "Thème Alien Helper", "Tema de Alien Helper", "Alien Helper テーマ", "Alien Helper 主题" },
+        ["theme.err"] = new[]
+        {
+            "Эту тему не получилось загрузить: {0}",
+            "This theme could not be loaded: {0}",
+            "Impossible de charger ce thème : {0}",
+            "No se pudo cargar este tema: {0}",
+            "このテーマを読み込めませんでした: {0}",
+            "无法加载此主题: {0}",
+        },
+        ["theme.warn"] = new[]
+        {
+            "Тема добавлена. Обратите внимание:\n\n{0}",
+            "The theme was added. Note:\n\n{0}",
+            "Le thème a été ajouté. À noter :\n\n{0}",
+            "Se añadió el tema. Tenga en cuenta:\n\n{0}",
+            "テーマを追加しました。注意:\n\n{0}",
+            "已添加主题。请注意:\n\n{0}",
+        },
         ["theme.dark"] = new[] { "Тёмная", "Dark", "Sombre", "Oscuro", "ダーク", "深色" },
         ["theme.light"] = new[] { "Светлая", "Light", "Clair", "Claro", "ライト", "浅色" },
         ["theme.strict"] = new[] { "Строгая", "Strict", "Sobre", "Sobrio", "シンプル", "简洁" },
