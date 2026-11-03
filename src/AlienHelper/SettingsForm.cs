@@ -139,9 +139,12 @@ public sealed class SettingsForm : Form
         numbers.Toggled += (_, _) => { _c.S.NumbersOnly = numbers.On; _c.S.Save(); BeginInvoke(() => LookChanged?.Invoke()); };
         card.Controls.Add(numbers);
         cy += S(30);
-        card.Controls.Add(new Label { Text = L.T("card.cards.hint"), ForeColor = Muted, Font = Theme.Font(8f), AutoSize = false,
-            Bounds = new Rectangle(S(Pad), cy, Inner, S(18)) });
-        cy += S(20);
+        var cardsHint = new Label { Text = L.T("card.cards.hint"), ForeColor = Muted, Font = Theme.Font(8f), AutoSize = false };
+        // two lines when a wide font (a theme's) does not fit it on one
+        int hintH = Math.Max(S(18), TextRenderer.MeasureText(cardsHint.Text, cardsHint.Font, new Size(Inner, 0), TextFormatFlags.WordBreak).Height + S(2));
+        cardsHint.Bounds = new Rectangle(S(Pad), cy, Inner, hintH);
+        card.Controls.Add(cardsHint);
+        cy += hintH + S(2);
         return Finish(card, cy);
     }
 
@@ -361,7 +364,7 @@ public sealed class SettingsForm : Form
         themeMenu.Opening += (_, _) =>
         {
             themeMenu.Items.Clear();
-            foreach (var look in new[] { Theme.Look.Dark, Theme.Look.Light, Theme.Look.Strict })
+            foreach (var look in Enum.GetValues<Theme.Look>())
             {
                 string key = Theme.Name(look);
                 themeMenu.Items.Add(Item(L.T("theme." + key), (_, _) => Pick(key), _c.S.Look == key));

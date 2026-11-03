@@ -189,6 +189,7 @@ public static class L
         },
         ["theme.dark"] = new[] { "Тёмная", "Dark", "Sombre", "Oscuro", "ダーク", "深色" },
         ["theme.light"] = new[] { "Светлая", "Light", "Clair", "Claro", "ライト", "浅色" },
+        ["theme.phosphor"] = new[] { "Терминал", "Terminal", "Terminal", "Terminal", "ターミナル", "终端" },
         ["theme.strict"] = new[] { "Строгая", "Strict", "Sobre", "Sobrio", "シンプル", "简洁" },
         ["opt.numbers"] = new[] { "Только цифры, без графиков", "Numbers only, no graphs", "Chiffres seuls, sans graphiques", "Solo números, sin gráficos", "数値のみ（グラフなし）", "仅数字，不显示图表" },
         ["card.net"] = new[] { "Сеть", "Network", "Réseau", "Red", "ネットワーク", "网络" },

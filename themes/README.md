@@ -9,7 +9,7 @@ at once, no restart.
 
 | File | Theme |
 |---|---|
-| [`phosphor-terminal.json`](phosphor-terminal.json) | Phosphor Terminal: a green monochrome retro CRT terminal look, monospace font, square corners, the overlay included |
+| [`phosphor-terminal.json`](phosphor-terminal.json) | Phosphor Terminal: a green monochrome retro CRT terminal look, monospace font, square corners, the overlay included. Built into the app as **Terminal**; the file is kept as an example to start from |
 
 ## Making a theme
 
@@ -68,7 +68,7 @@ Alien Helper умеет загружать темы из файлов, поэт�
 
 | Файл | Тема |
 |---|---|
-| [`phosphor-terminal.json`](phosphor-terminal.json) | Терминал (люминофор): зелёный монохромный ретро-терминал с ЭЛТ, моноширинный шрифт, квадратные углы, оверлей тоже в теме |
+| [`phosphor-terminal.json`](phosphor-terminal.json) | Терминал (люминофор): зелёный монохромный ретро-терминал с ЭЛТ, моноширинный шрифт, квадратные углы, оверлей тоже в теме. Встроена в программу как «Терминал»; файл оставлен как пример, с которого удобно начать |
 
 ## Как сделать тему
 

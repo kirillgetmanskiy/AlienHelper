@@ -221,7 +221,7 @@ public sealed class Toggle : DrawnControl
         using (var b = new SolidBrush(track)) g.FillPath(b, p);
         float d = h - Sf(6);
         float x = On && Enabled ? r.Right - d - Sf(3) : r.X + Sf(3);
-        using (var b = new SolidBrush(Enabled ? Knob : Muted)) FillDot(g, b, new RectangleF(x, y + Sf(3), d, d));
+        using (var b = new SolidBrush(!Enabled ? Muted : On ? Knob : KnobOff)) FillDot(g, b, new RectangleF(x, y + Sf(3), d, d));
         using var f = Theme.Font(9.5f);
         TextRenderer.DrawText(g, Text, f, new Rectangle(0, 0, (int)(r.X - S(8)), Height), !Enabled ? Blend(Theme.Card, Muted, 0.7f) : Hover ? Fg : Blend(Muted, Fg, 0.6f),
             TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis);
