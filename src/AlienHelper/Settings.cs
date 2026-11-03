@@ -31,6 +31,7 @@ public sealed class Settings
     public bool ApplyOnStart { get; set; } = true;
     public bool StartMinimized { get; set; } = true;   // start in the tray without opening the window
     public bool GuardLights { get; set; }               // put our lighting back after AWCC's lighting agent repaints it
+    public bool HoldGpuPower { get; set; } = true;      // re-apply Alien Mode when the GPU is held at the low power limit in it
     // global hotkeys as System.Windows.Forms.Keys values (key | Control | Shift | Alt), 0 = none
     public int OverlayHotkey { get; set; } = (int)(System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift | System.Windows.Forms.Keys.O);
     public int ModeHotkey { get; set; } = (int)(System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift | System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.M);

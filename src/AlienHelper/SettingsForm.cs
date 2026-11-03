@@ -273,6 +273,12 @@ public sealed class SettingsForm : Form
             guard.Toggled += (_, _) => { _c.S.GuardLights = guard.On; _c.S.Save(); if (guard.On) Task.Run(_c.EnforceLights); };
             new ToolTip { AutoPopDelay = 15000, InitialDelay = 300 }.SetToolTip(guard, L.T("opt.guardlights.tip"));
         }
+        if (_c.Awcc?.Profiles.Contains(Hardware.Awcc.ProfileGMode) == true)
+        {
+            var hold = AddToggle(card, ref cy, new Toggle(L.T("opt.holdgpu")) { On = _c.S.HoldGpuPower });
+            hold.Toggled += (_, _) => { _c.S.HoldGpuPower = hold.On; _c.S.Save(); };
+            new ToolTip { AutoPopDelay = 15000, InitialDelay = 300 }.SetToolTip(hold, L.T("opt.holdgpu.tip"));
+        }
         var startup = AddToggle(card, ref cy, new Toggle(L.T("opt.autostart")) { On = Autostart.IsEnabled() });
         startup.Toggled += async (_, _) =>
         {

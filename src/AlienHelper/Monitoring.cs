@@ -161,6 +161,9 @@ public sealed class SensorMonitor : IDisposable
             lock (_demand) { need = _demand.Values.Aggregate(_once, (x, y) => x | y); _once = Need.None; }
             bool boost = _c.S.FanBoost > 0 || _c.S.FanBoostCpu > 0 || _c.S.FanBoostGpu > 0;
             if (need == Need.None && boost) need = Need.Mode;
+            // Alien Mode: the GPU power limit is watched in the background as well (see Controller.NotifyGpuPower)
+            bool watchOnly = (need & ~Need.Mode) == Need.None;
+            if (watchOnly && _c.WatchGpuPower) need |= Need.Mode | Need.Gpu;
             if (need == Need.None)
             {
                 // nothing on screen and no boost to watch: sleep until a window asks for data
@@ -176,7 +179,7 @@ public sealed class SensorMonitor : IDisposable
             if (Interlocked.Exchange(ref _posted, 1) == 0) _ui.Post(_ => ApplyQueued(), null);
 
             // only the mode is watched: every 2 s is plenty
-            int period = need == Need.Mode ? Math.Max(IntervalMs, 2000) : IntervalMs;
+            int period = watchOnly ? Math.Max(IntervalMs, 2000) : IntervalMs;
             next += period;
             long now = Clock.ElapsedMilliseconds;
             if (next < now) next = now;                       // a slow read: carry on from now instead of bursting
@@ -337,7 +340,7 @@ public sealed class SensorMonitor : IDisposable
     {
         long now = Clock.ElapsedMilliseconds;
         if (r.PowerLimitW <= 0 || Math.Abs(r.PowerLimitW - gd.LoggedLimit) < 5 || now - gd.LimitLoggedAt < 10000) return;
-        Log.Info($"gpu power limit {gd.LoggedLimit:0} -> {r.PowerLimitW:0} W: mode 0x{Last?.Profile ?? -1:X2}, draw {r.PowerW:0} W, load {r.Load}%");
+        Log.Info($"gpu power limit {gd.LoggedLimit:0} -> {r.PowerLimitW:0} W: mode 0x{Last?.Profile ?? -1:X2}, gameshift {Last?.GMode ?? -1}, draw {r.PowerW:0} W, load {r.Load}%, {r.Temp} °C");
         gd.LoggedLimit = r.PowerLimitW;
         gd.LimitLoggedAt = now;
     }
@@ -351,6 +354,7 @@ public sealed class SensorMonitor : IDisposable
                 if (gd.Fake) { var f = Gpus[0].Stats; gd.Stats = f; gd.Temp = Gpus[0].Temp; continue; }
                 var r = _nvml!.Read(gd.Index);
                 LogPowerLimit(gd, r);
+                if (gd.Index == 0) _c.NotifyGpuPower(r.PowerLimitW, r.PowerW, r.Load, r.Temp, Last?.Profile ?? -1);
                 int mem = r.MemTemp > 0 ? r.MemTemp : _nvapi?.MemoryTemp(gd.Bus, gd.Index) ?? -1;
                 gd.Stats = new GpuStats(r.Load, r.CoreMhz, r.MemMhz, r.PowerW, r.VramUsedGb, r.VramTotalGb, mem);
                 gd.Temp = r.Temp;
