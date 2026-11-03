@@ -345,26 +345,70 @@ public sealed class SettingsForm : Form
         cy += S(26) + S(8);
 
         card.Controls.Add(new Label { Text = L.T("opt.theme"), ForeColor = Muted, Font = Theme.Font(9f), AutoSize = true, Location = new Point(S(Pad), cy + S(4)) });
-        var looks = new[] { Theme.Look.Dark, Theme.Look.Light, Theme.Look.Strict };
-        string LookText(Theme.Look l) => L.T("theme." + Theme.Name(l));
-        var themeBtn = new PillButton(LookText(Theme.Current) + "   ▾") { Height = S(26), Width = S(140) };
+        string currentTitle = Theme.Current.IsFile ? Theme.Current.Title : L.T("theme." + Theme.Current.Key);
+        var themeBtn = new PillButton(currentTitle + "   ▾") { Height = S(26), Width = S(160) };
         themeBtn.Location = new Point(S(Pad) + Inner - themeBtn.Width, cy);
         var themeMenu = new ContextMenuStrip { Renderer = new Theme.MenuRenderer(), ShowImageMargin = false, ShowCheckMargin = true };
-        foreach (var look in looks)
+        void Pick(string key)
         {
-            var l = look;
-            themeMenu.Items.Add(new ToolStripMenuItem(LookText(l), null, (_, _) =>
-            {
-                if (Theme.Current == l) return;
-                _c.S.Look = Theme.Name(l);
-                _c.S.Save();
-                BeginInvoke(() => LookChanged?.Invoke());
-            }) { Checked = Theme.Current == l, ForeColor = Fg });
+            if (_c.S.Look == key) return;
+            _c.S.Look = key;
+            _c.S.Save();
+            BeginInvoke(() => LookChanged?.Invoke());
         }
+        ToolStripMenuItem Item(string text, EventHandler click, bool check = false) => new(text, null, click) { Checked = check, ForeColor = Fg };
+        // the menu is filled on every open, so files put into the themes folder show up without a restart
+        themeMenu.Opening += (_, _) =>
+        {
+            themeMenu.Items.Clear();
+            foreach (var look in new[] { Theme.Look.Dark, Theme.Look.Light, Theme.Look.Strict })
+            {
+                string key = Theme.Name(look);
+                themeMenu.Items.Add(Item(L.T("theme." + key), (_, _) => Pick(key), _c.S.Look == key));
+            }
+            var files = ThemeFiles.List();
+            if (files.Count > 0) themeMenu.Items.Add(new ToolStripSeparator());
+            foreach (var f in files)
+            {
+                string key = ThemeFiles.Prefix + f.Name;
+                themeMenu.Items.Add(Item(f.Title, (_, _) => Pick(key), _c.S.Look == key));
+            }
+            themeMenu.Items.Add(new ToolStripSeparator());
+            themeMenu.Items.Add(Item(L.T("theme.add"), (_, _) => BeginInvoke(ImportTheme)));
+            themeMenu.Items.Add(Item(L.T("theme.folder"), (_, _) =>
+            {
+                try { Directory.CreateDirectory(ThemeFiles.Dir); System.Diagnostics.Process.Start("explorer.exe", ThemeFiles.Dir); }
+                catch (Exception ex) { Log.Warn("themes folder: " + ex.Message); }
+            }));
+            themeMenu.Items.Add(Item(L.T("theme.export"), (_, _) => BeginInvoke(ExportTheme)));
+        };
+        themeMenu.Items.Add(new ToolStripMenuItem("…"));   // a menu without items does not open
         themeBtn.Click += (_, _) => themeMenu.Show(themeBtn, new Point(0, themeBtn.Height + S(2)));
         card.Controls.Add(themeBtn);
         cy += S(26) + S(6);
         return Finish(card, cy);
+    }
+
+    /// <summary>Settings → Theme → Add theme: checks a .json theme, copies it into the themes folder and switches to it.</summary>
+    void ImportTheme()
+    {
+        using var dlg = new OpenFileDialog { Filter = L.T("theme.filter") + " (*.json)|*.json", Title = L.T("theme.add") };
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+        var key = ThemeFiles.Import(dlg.FileName, out var message);
+        if (key == null) { MessageBox.Show(this, L.T("theme.err", message), Log.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+        if (message.Length > 0) MessageBox.Show(this, L.T("theme.warn", message), Log.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+        _c.S.Look = key;
+        _c.S.Save();
+        LookChanged?.Invoke();
+    }
+
+    /// <summary>Settings → Theme → Save as file: the current theme as a template to change and import.</summary>
+    void ExportTheme()
+    {
+        using var dlg = new SaveFileDialog { Filter = L.T("theme.filter") + " (*.json)|*.json", FileName = "my-theme.json", Title = L.T("theme.export") };
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+        try { ThemeFiles.Export(dlg.FileName); }
+        catch (Exception ex) { MessageBox.Show(this, L.T("theme.err", ex.Message), Log.AppTitle); }
     }
 
     int BuildDiagnostics(int y)

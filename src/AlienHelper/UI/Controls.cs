@@ -488,7 +488,7 @@ public sealed class CoreTile : DrawnControl
         using (var p = Round(r, Sf(10)))
         using (var pen = new Pen(Border)) g.DrawPath(pen, p);
 
-        var c = Performance ? Accent : Hex("#9B7BFF");
+        var c = Performance ? Accent : Extra;
         float top = S(40), bottom = Height - S(8), left = S(8), right = Width - S(8);
         using (var gp = new Pen(Color.FromArgb(30, Muted)))
             for (int i = 0; i <= 2; i++) { float y = bottom - (bottom - top) * i / 2; g.DrawLine(gp, left, y, right, y); }

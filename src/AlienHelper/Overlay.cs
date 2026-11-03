@@ -217,9 +217,26 @@ public sealed class OverlayForm : Form
     bool _game;   // a full-screen game is in front: frame rate rows and the process name are shown
     long _gameUntil;   // the frame rate rows stay this long after the last game check passed (no blinking)
 
-    // fonts are created once; the overlay repaints twice a second
-    static readonly Font HeaderFont = Theme.Font(8f), LabelFont = Semibold(8f), ValueFont = Semibold(10f),
-        BigFont = Semibold(14f), ExtraFont = Theme.Font(8.5f), BarValueFont = Semibold(11f), BarBigFont = Semibold(13f);
+    // fonts are created once per font family (a theme file may name its own); the overlay repaints twice a second
+    static string? _fontsFor;
+    static Font _header = null!, _label = null!, _value = null!, _big = null!, _extra = null!, _barValue = null!, _barBig = null!;
+    static void Fonts()
+    {
+        if (_fontsFor == Family) return;
+        (_header, _label, _value, _big, _extra, _barValue, _barBig) =
+            (Theme.Font(8f), Semibold(8f), Semibold(10f), Semibold(14f), Theme.Font(8.5f), Semibold(11f), Semibold(13f));
+        _fontsFor = Family;
+    }
+    static Font HeaderFont { get { Fonts(); return _header; } }
+    static Font LabelFont { get { Fonts(); return _label; } }
+    static Font ValueFont { get { Fonts(); return _value; } }
+    static Font BigFont { get { Fonts(); return _big; } }
+    static Font ExtraFont { get { Fonts(); return _extra; } }
+    static Font BarValueFont { get { Fonts(); return _barValue; } }
+    static Font BarBigFont { get { Fonts(); return _barBig; } }
+
+    /// <summary>Full style: where the values start, past the widest label (wider fonts push it right).</summary>
+    int FullValueX() => Stable("full.label", Math.Max(S(58), S(12) + _rows.Select(r => TextRenderer.MeasureText(r.Label, LabelFont).Width).DefaultIfEmpty(0).Max() + S(6)));
 
     int _style;
     public int Style
@@ -330,7 +347,8 @@ public sealed class OverlayForm : Form
 
     void Rebuild()
     {
-        using var dark = Theme.Use(Theme.Look.Dark);   // row colors come from the theme; the overlay is always dark
+        using var dark = Theme.UseOverlay();   // row colors come from the theme; over games it stays dark unless the theme covers it
+        if (_widthsFor != Family) { _widths.Clear(); _widthsFor = Family; }   // another font: measure again
         _rows.Clear();
         var s = _stats;
         var g = _mon.GpuInfo;
@@ -403,7 +421,7 @@ public sealed class OverlayForm : Form
         if (gpuW > 0)
         {
             string v = $"{gpuW:0} {W}";
-            _rows.Add(new Row { Label = "GPU " + W, Icon = OvIcon.Power, Value = v, Compact = v, StripText = "GPU " + v, Wide = $"GPU 888 {W}", Color = Hex("#FFD27A"), History = _gpuPwr, Min = 0, Max = Math.Max(60, _gpuPwr.DefaultIfEmpty(0).Max() * 1.1f) });
+            _rows.Add(new Row { Label = "GPU " + W, Icon = OvIcon.Power, Value = v, Compact = v, StripText = "GPU " + v, Wide = $"GPU 888 {W}", Color = Data("#FFD27A"), History = _gpuPwr, Min = 0, Max = Math.Max(60, _gpuPwr.DefaultIfEmpty(0).Max() * 1.1f) });
         }
         float allW = Keep("all.w", _mon.PowerTotalW, TotalMeasured);
         if (allW > 0)
@@ -418,14 +436,14 @@ public sealed class OverlayForm : Form
             float used = Keep("vram.used", g?.VramUsedGb ?? -1, g is { VramTotalGb: > 0, VramUsedGb: >= 0 });
             int memTemp = (int)Keep("vram.temp", g?.MemTemp ?? -1, g is { MemTemp: > 0 });
             string u = used >= 0 ? $"{used:0.0}" : "—";
-            _rows.Add(new Row { Label = "VRAM", Icon = OvIcon.Vram, Value = $"{u} / {vramTotal:0} {GB}" + (memTemp > 0 ? $" · {memTemp}°" : ""), Compact = used >= 0 ? $"{u} {GB}" : "—", Wide = $"88.8 / {vramTotal:0} {GB} · 88°", Color = Hex("#9B7BFF"), History = _vram, Min = 0, Max = vramTotal });
+            _rows.Add(new Row { Label = "VRAM", Icon = OvIcon.Vram, Value = $"{u} / {vramTotal:0} {GB}" + (memTemp > 0 ? $" · {memTemp}°" : ""), Compact = used >= 0 ? $"{u} {GB}" : "—", Wide = $"88.8 / {vramTotal:0} {GB} · 88°", Color = Extra, History = _vram, Min = 0, Max = vramTotal });
         }
         var (ru, rt) = SystemMemory.Read();
         float ramTotal = Keep("ram.total", rt, rt > 0), ramUsed = Keep("ram.used", ru, rt > 0 && ru > 0);
         if (ramTotal > 0)
         {
             string u = ramUsed > 0 ? $"{ramUsed:0.0}" : "—";
-            _rows.Add(new Row { Label = "RAM", Icon = OvIcon.Ram, Value = $"{u} / {ramTotal:0} {GB}", Compact = ramUsed > 0 ? $"{u} {GB}" : "—", Wide = $"888.8 / {ramTotal:0} {GB}", Color = Hex("#62D2FF"), History = _ram, Min = 0, Max = ramTotal });
+            _rows.Add(new Row { Label = "RAM", Icon = OvIcon.Ram, Value = $"{u} / {ramTotal:0} {GB}", Compact = ramUsed > 0 ? $"{u} {GB}" : "—", Wide = $"888.8 / {ramTotal:0} {GB}", Color = Data("#62D2FF"), History = _ram, Min = 0, Max = ramTotal });
         }
         if (snap != null)
         {
@@ -442,7 +460,7 @@ public sealed class OverlayForm : Form
             _rows.Add(new Row
             {
                 Label = "MODE", Icon = OvIcon.Mode, Value = mode, Compact = mode, Wide = WidestMode(),
-                Color = _c.S.FanCurve ? Hex("#9B7BFF") : snap.Profile == Hardware.Awcc.ProfileGMode ? Warm : Accent,
+                Color = _c.S.FanCurve ? Extra : snap.Profile == Hardware.Awcc.ProfileGMode ? Warm : Accent,
             });
         }
 
@@ -451,7 +469,7 @@ public sealed class OverlayForm : Form
             1 => MeasureMiniColumn(),
             2 => MeasureBar(),
             3 => MeasureIconStrip(),
-            _ => new Size(S(270), S(30) + _rows.Sum(RowHeight) + S(6)),
+            _ => new Size(S(270) + FullValueX() - S(58), S(30) + _rows.Sum(RowHeight) + S(6)),
         };
         if (Size != size)
         {
@@ -478,6 +496,7 @@ public sealed class OverlayForm : Form
     // ---------------- measuring ----------------
 
     /// <summary>The widest width seen for this key since the style was picked.</summary>
+    string? _widthsFor;
     int Stable(string key, int w)
     {
         if (_widths.TryGetValue(key, out int old) && old >= w) return old;
@@ -522,7 +541,8 @@ public sealed class OverlayForm : Form
 
     protected override void OnPaint(PaintEventArgs e)
     {
-        using var dark = Theme.Use(Theme.Look.Dark);   // over games the overlay stays dark whatever the app theme
+        using var dark = Theme.UseOverlay();   // over games the overlay stays dark unless the theme covers it
+        if (BackColor != OverlayBack) BackColor = OverlayBack;
         var g = e.Graphics;
         Smooth(g);
         switch (_style)
@@ -538,7 +558,7 @@ public sealed class OverlayForm : Form
     {
         if (_game) TextRenderer.DrawText(g, _proc, HeaderFont, new Rectangle(S(12), S(8), Width - S(24), S(16)), Muted, TextFormatFlags.EndEllipsis);
         int y = S(28);
-        int left = S(12), right = Width - S(12), valueX = S(58);
+        int left = S(12), right = Width - S(12), valueX = FullValueX();
         foreach (var r in _rows)
         {
             var font = r.Big ? BigFont : ValueFont;
@@ -574,7 +594,7 @@ public sealed class OverlayForm : Form
     void PaintBar(Graphics g)
     {
         int x = S(10);
-        using var sep = new Pen(Color.FromArgb(40, 255, 255, 255));
+        using var sep = new Pen(Color.FromArgb(40, Fg));
         for (int i = 0; i < _rows.Count; i++)
         {
             var r = _rows[i];
@@ -607,7 +627,7 @@ public sealed class OverlayForm : Form
     static void DrawGraph(Graphics g, Row r, RectangleF rect)
     {
         using (var bg = Round(rect, Sf(3)))
-        using (var b = new SolidBrush(Color.FromArgb(28, 255, 255, 255))) g.FillPath(b, bg);
+        using (var b = new SolidBrush(Color.FromArgb(28, Fg))) g.FillPath(b, bg);
         var h = r.History!;
         if (h.Count < 2 || r.Max <= r.Min) return;
         int cap = r.Bars ? FrameCap : Math.Max(Cap, h.Count);

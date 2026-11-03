@@ -7,7 +7,7 @@ namespace AlienHelper;
 /// <summary>Temperature / fan history and per-core load, all fed by the shared SensorMonitor.</summary>
 public sealed class ChartsForm : Form
 {
-    static readonly Color[] FanColors = { Hex("#1FB6FF"), Hex("#62D2FF"), Hex("#FF8A3D"), Hex("#FFB37D") };
+    static Color[] FanColors => new[] { Data("#1FB6FF"), Data("#62D2FF"), Data("#FF8A3D"), Data("#FFB37D") };
 
     readonly SensorMonitor _mon;
     readonly LineChart _temps = new() { Title = L.T("ch.temps"), FixedMin = 30, FixedMax = 100, Capacity = SensorMonitor.Capacity };
@@ -17,9 +17,9 @@ public sealed class ChartsForm : Form
     readonly LineChart _ssd = new() { Title = L.T("ch.ssd"), FixedMin = 20, FixedMax = 90, Capacity = SensorMonitor.Capacity };
     readonly LineChart _net = new() { Title = L.T("ch.net"), FixedMin = 0, Capacity = SensorMonitor.Capacity, AxisFormat = "0.0" };
     readonly LineChart _ssdIo = new() { Title = L.T("ch.ssdio"), FixedMin = 0, Capacity = SensorMonitor.Capacity, AxisFormat = "0" };
-    static readonly Color[] DiskColors = { Hex("#C9A7FF"), Hex("#8FD3FF"), Hex("#FFE08A") };
-    static readonly Color[] ReadColors = { Hex("#62D2FF"), Hex("#C9A7FF"), Hex("#8FFFD0") };
-    static readonly Color[] WriteColors = { Hex("#FF8A3D"), Hex("#FFE08A"), Hex("#FF6B8B") };
+    static Color[] DiskColors => new[] { Data("#C9A7FF"), Data("#8FD3FF"), Data("#FFE08A") };
+    static Color[] ReadColors => new[] { Data("#62D2FF"), Data("#C9A7FF"), Data("#8FFFD0") };
+    static Color[] WriteColors => new[] { Data("#FF8A3D"), Data("#FFE08A"), Data("#FF6B8B") };
     readonly Label _coreHeader = new() { AutoSize = false, ForeColor = Fg, Font = Semibold(10.5f), Text = L.T("ch.cores.loading") };
     readonly Label _coreNote = new()
     {
@@ -48,8 +48,8 @@ public sealed class ChartsForm : Form
         _temps.Series.Add(new Series { Name = "GPU", Color = Good, Unit = "°" });
         string ghz = " " + L.T("u.ghz"), gb = " " + L.T("u.gb");
         _clocks.Series.Add(new Series { Name = "P-core", Color = Accent, Unit = ghz });
-        _clocks.Series.Add(new Series { Name = "E-core", Color = Hex("#9B7BFF"), Unit = ghz });
-        _memory.Series.Add(new Series { Name = "RAM", Color = Hex("#62D2FF"), Unit = gb });
+        _clocks.Series.Add(new Series { Name = "E-core", Color = Extra, Unit = ghz });
+        _memory.Series.Add(new Series { Name = "RAM", Color = Data("#62D2FF"), Unit = gb });
         int maxRpm = c.Awcc?.Fans.Select(f => f.MaxRpm).DefaultIfEmpty(6000).Max() ?? 6000;
         _fans.FixedMax = (float)Math.Ceiling((maxRpm + 400) / 1000.0) * 1000;
         if (c.Awcc != null)
@@ -272,8 +272,8 @@ public sealed class ChartsForm : Form
         }
     }
 
-    static readonly Color[] GpuColors = { Good, Hex("#B4F07A"), Hex("#4FD8C4") };
-    static readonly Color[] VramColors = { Hex("#9B7BFF"), Hex("#D08BFF"), Hex("#7B9BFF") };
+    static Color[] GpuColors => new[] { Good, Data("#B4F07A"), Data("#4FD8C4") };
+    static Color[] VramColors => new[] { Extra, Data("#D08BFF"), Data("#7B9BFF") };
 
     /// <summary>The named series, added on first use.</summary>
     static Series Ensure(LineChart chart, string name, Color color, string unit)

@@ -1,0 +1,24 @@
+{
+  "format": 1,
+  "name": { "en": "Phosphor Terminal", "ru": "Терминал (люминофор)", "fr": "Terminal phosphore", "es": "Terminal de fósforo", "ja": "蛍光ターミナル", "zh": "荧光终端" },
+  "author": "Alien Helper",
+  "base": "dark",
+  "corners": "square",
+  "font": "Consolas",
+  "tint": "#3CFF7A",
+  "overlay": true,
+  "colors": {
+    "background": "#020D06",
+    "card": "#05180B",
+    "cardHover": "#0A2614",
+    "border": "#0F3D20",
+    "track": "#0D3019",
+    "text": "#4DFF88",
+    "muted": "#1F9A4C",
+    "accent": "#3CFF7A",
+    "hot": "#E8FFB0",
+    "good": "#2EE86A",
+    "warning": "#B8FF4D",
+    "extra": "#7DFFB0"
+  }
+}
