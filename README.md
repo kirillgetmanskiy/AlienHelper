@@ -64,8 +64,9 @@ Alien Helper is free and open source. If it is useful to you, you can support it
   lighting after sign-in, and again after sleep. The fan boost follows the mode.
   If the firmware reports an unknown mode, the window shows "now: unknown" and no button is highlighted.
 - Themes (**Settings** → **Theme**): **Dark** (default), **Light** (the same design on light surfaces) and **Strict**
-  (graphite, square corners and knobs, flat fills without gradients). The title bar and tray menu follow the theme;
-  the game overlay and the mode hint stay dark in every theme so they do not glare over games.
+  (graphite, square corners and knobs, flat fills without gradients), and **Terminal** (green monochrome retro CRT look:
+  Consolas, square corners, every chart in shades of green, the overlay included). The title bar and tray menu follow
+  the theme; the game overlay and the mode hint stay dark in the other themes so they do not glare over games.
 - Themes from files: anyone can make one (a small `.json` with colors, and optionally a font, square corners and a tint
   for one-color themes) and add it in **Settings** → **Theme** → **Add theme…**; **Save current as file…** gives a
   template. Format and ready themes: [`themes/`](themes/README.md). They are not built into the app.

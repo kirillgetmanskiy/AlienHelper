@@ -7,7 +7,7 @@ namespace AlienHelper.UI;
 public static class Theme
 {
     /// <summary>The built-in looks; chosen in Settings, applied before windows are (re)created.</summary>
-    public enum Look { Dark, Light, Strict }
+    public enum Look { Dark, Light, Strict, Phosphor }
 
     /// <summary>A theme's colors. <see cref="Extra"/> is the second data color (E-cores, VRAM, Custom mode).</summary>
     public sealed record Palette(Color Bg, Color Card, Color CardHi, Color Border, Color Track, Color Fg, Color Muted,
@@ -36,12 +36,18 @@ public static class Theme
         // plain graphite, square corners, flat fills, quieter accent
         [Look.Strict] = new(Hex("#161616"), Hex("#1F1F1F"), Hex("#2A2A2A"), Hex("#383838"), Hex("#3C3C3C"),
             Hex("#ECECEC"), Hex("#9A9A9A"), Hex("#5AA0E6"), Hex("#E2683C"), Hex("#4CC38A"), Hex("#E0B040"), Hex("#9B7BFF")),
+        // green monochrome retro CRT terminal (the same as themes/phosphor-terminal.json): Consolas, square corners, every
+        // series in shades of green, the overlay included
+        [Look.Phosphor] = new(Hex("#020D06"), Hex("#05180B"), Hex("#0A2614"), Hex("#0F3D20"), Hex("#0D3019"),
+            Hex("#4DFF88"), Hex("#1F9A4C"), Hex("#3CFF7A"), Hex("#E8FFB0"), Hex("#2EE86A"), Hex("#B8FF4D"), Hex("#7DFFB0")),
     };
 
     /// <summary>The colors of a built-in look: the defaults a theme file starts from.</summary>
     public static Palette BuiltIn(Look l) => Palettes[l];
 
-    public static Def Builtin(Look l) => new(Name(l), l, Palettes[l], SquareCorners: l == Look.Strict);
+    public static Def Builtin(Look l) => l == Look.Phosphor
+        ? new(Name(l), l, Palettes[l], SquareCorners: true, FontFamily: "Consolas", Tint: Hex("#3CFF7A"), Overlay: true)
+        : new(Name(l), l, Palettes[l], SquareCorners: l == Look.Strict);
 
     public static Def Current { get; private set; } = Builtin(Look.Dark);
     public static Color Bg { get; private set; }
@@ -73,7 +79,7 @@ public static class Theme
     }
 
     /// <summary>
-    /// Applies a theme by its settings name: "dark", "light", "strict", or "file:&lt;name&gt;" for a theme file. A file
+    /// Applies a theme by its settings name: "dark", "light", "strict", "phosphor", or "file:&lt;name&gt;" for a theme file. A file
     /// that is gone or unreadable falls back to the dark look (and says why in the log).
     /// </summary>
     public static void Apply(string? name)
@@ -86,14 +92,17 @@ public static class Theme
             Set(Builtin(Look.Dark));
             return;
         }
-        Set(Builtin(name switch { "light" => Look.Light, "strict" => Look.Strict, _ => Look.Dark }));
+        Set(Builtin(name switch { "light" => Look.Light, "strict" => Look.Strict, "phosphor" => Look.Phosphor, _ => Look.Dark }));
     }
 
     public static string Name(Look l) => l.ToString().ToLowerInvariant();
 
     public static bool IsDark => Current.Base != Look.Light;
-    /// <summary>Slider and switch knobs: light text color on dark looks, white on the light one.</summary>
-    public static Color Knob => IsDark ? Fg : Color.White;
+    /// <summary>Slider and switch knobs: light text color on dark looks, white on the light one; the background color
+    /// when the text color is close to the accent (one-color themes), so the knob still shows on an "on" switch.</summary>
+    public static Color Knob => !IsDark ? Color.White : ThemeFiles.Contrast(Fg, Accent) < 1.8 ? Bg : Fg;
+    /// <summary>The knob of a switch that is off: it sits on the track, not on the accent.</summary>
+    public static Color KnobOff => IsDark ? Fg : Color.White;
     /// <summary>Strict look (and themes that ask for it): square corners and flat fills.</summary>
     public static bool Square => Current.SquareCorners;
 
@@ -109,7 +118,7 @@ public static class Theme
     }
 
     /// <summary>Background of the overlay windows (call inside <see cref="UseOverlay"/>).</summary>
-    public static Color OverlayBack => Current.IsFile ? Blend(Bg, Color.Black, 0.25f) : Color.FromArgb(10, 12, 16);
+    public static Color OverlayBack => Current.Overlay ? Blend(Bg, Color.Black, 0.25f) : Color.FromArgb(10, 12, 16);
 
     /// <summary>
     /// A data series color (charts, overlay rows). Unchanged, unless the theme has a tint: then it takes the tint's hue
