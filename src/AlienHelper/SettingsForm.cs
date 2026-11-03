@@ -276,7 +276,13 @@ public sealed class SettingsForm : Form
         if (Autostart.Supported)
         {
             // starts at sign-in through the Run key; Windows then shows the UAC prompt
-            var startup = AddToggle(card, ref cy, new Toggle(L.T("opt.autostart")) { On = Autostart.IsEnabled() });
+            if (_c.Awcc?.Profiles.Contains(Hardware.Awcc.ProfileGMode) == true)
+        {
+            var hold = AddToggle(card, ref cy, new Toggle(L.T("opt.holdgpu")) { On = _c.S.HoldGpuPower });
+            hold.Toggled += (_, _) => { _c.S.HoldGpuPower = hold.On; _c.S.Save(); };
+            new ToolTip { AutoPopDelay = 15000, InitialDelay = 300 }.SetToolTip(hold, L.T("opt.holdgpu.tip"));
+        }
+        var startup = AddToggle(card, ref cy, new Toggle(L.T("opt.autostart")) { On = Autostart.IsEnabled() });
             startup.Toggled += async (_, _) =>
             {
                 bool want = startup.On;

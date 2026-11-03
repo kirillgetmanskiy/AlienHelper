@@ -280,6 +280,16 @@ public static class L
             "Alienware Command Center は時々ライティングを勝手にオンにします。サインイン、ロック解除、スリープ解除、モード変更の後、アプリは 1 分間に数回自分のライティングを戻します (ここでオフならオフのまま)。",
             "Alienware Command Center 有时会自行打开灯光。登录、解锁、从睡眠唤醒和切换模式后，应用会在一分钟内多次恢复自己的灯光 (如果这里关闭了灯光，则保持关闭)。",
         },
+        ["opt.holdgpu"] = new[] { "Удерживать мощность GPU в Alien Mode", "Hold GPU power in Alien Mode", "Maintenir la puissance du GPU en Alien Mode", "Mantener la potencia de la GPU en Alien Mode", "Alien Mode で GPU の電力を維持", "在 Alien Mode 下保持 GPU 功率" },
+        ["opt.holdgpu.tip"] = new[]
+        {
+            "Иногда в Alien Mode видеокарта под нагрузкой остаётся на низком лимите мощности (80 Вт, как в Balanced), хотя режим не менялся. Если это длится больше 10 секунд, программа сама переключает режим туда и обратно. Горячую видеокарту (от 87 °C) не трогает.",
+            "Now and then in Alien Mode the GPU stays at the low power limit under load (80 W, as in Balanced) although the mode did not change. When that lasts over 10 seconds, the app switches the mode away and back. A hot GPU (87 °C and up) is left alone.",
+            "Parfois en Alien Mode, le GPU reste à la limite de puissance basse sous charge (80 W, comme en Balanced) alors que le mode n'a pas changé. Si cela dure plus de 10 secondes, l'application change de mode puis y revient. Un GPU chaud (87 °C et plus) n'est pas touché.",
+            "A veces en Alien Mode la GPU se queda en el límite de potencia bajo con carga (80 W, como en Balanced) aunque el modo no cambió. Si dura más de 10 segundos, la aplicación cambia de modo y vuelve. Una GPU caliente (87 °C o más) no se toca.",
+            "Alien Mode でも、モードが変わっていないのに負荷時の GPU が低い電力上限 (Balanced と同じ 80 W) のままになることがあります。10 秒以上続くと、アプリがモードを切り替えて戻します。高温の GPU (87 °C 以上) には触れません。",
+            "在 Alien Mode 下，有时模式没有变化，但 GPU 在负载下仍停留在较低的功率上限 (80 W，与 Balanced 相同)。持续超过 10 秒时，应用会切换模式再切回。GPU 过热 (87 °C 及以上) 时不做处理。",
+        },
         ["opt.apply"] = new[]
         {
             "Применять настройки при запуске", "Apply settings on start", "Appliquer les réglages au démarrage",
