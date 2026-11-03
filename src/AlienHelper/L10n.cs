@@ -280,6 +280,34 @@ public static class L
             "Alienware Command Center は時々ライティングを勝手にオンにします。サインイン、ロック解除、スリープ解除、モード変更の後、アプリは 1 分間に数回自分のライティングを戻します (ここでオフならオフのまま)。",
             "Alienware Command Center 有时会自行打开灯光。登录、解锁、从睡眠唤醒和切换模式后，应用会在一分钟内多次恢复自己的灯光 (如果这里关闭了灯光，则保持关闭)。",
         },
+        ["opt.awccoff"] = new[] { "Отключить AWCC", "Turn off AWCC", "Désactiver AWCC", "Desactivar AWCC", "AWCC をオフにする", "关闭 AWCC" },
+        ["opt.awccoff.tip"] = new[]
+        {
+            "Останавливает и отключает службу Dell TechHub, которая запускает агенты Alienware Command Center (режимы, питание, подсветку). Так AWCC больше не вмешивается. Ничего не удаляется: выключите тумблер, и служба вернётся. Пока AWCC отключён, не работают диагностика и обновления SupportAssist / Dell Update.",
+            "Stops and disables the Dell TechHub service that starts Alienware Command Center's agents (modes, power, lighting), so AWCC no longer interferes. Nothing is uninstalled: switch it back and the service returns. While AWCC is off, SupportAssist / Dell Update diagnostics and updates do not work.",
+            "Arrête et désactive le service Dell TechHub qui lance les agents d'Alienware Command Center (modes, alimentation, éclairage) : AWCC n'interfère plus. Rien n'est désinstallé : désactivez l'option et le service revient. Tant qu'AWCC est désactivé, les diagnostics et mises à jour SupportAssist / Dell Update ne fonctionnent pas.",
+            "Detiene y desactiva el servicio Dell TechHub que inicia los agentes de Alienware Command Center (modos, energía, iluminación), así AWCC deja de interferir. No se desinstala nada: desactive la opción y el servicio vuelve. Mientras AWCC está desactivado, los diagnósticos y actualizaciones de SupportAssist / Dell Update no funcionan.",
+            "Alienware Command Center のエージェント (モード、電力、ライティング) を起動する Dell TechHub サービスを停止・無効化し、AWCC が干渉しないようにします。何もアンインストールしません: オフに戻すとサービスも戻ります。AWCC がオフの間、SupportAssist / Dell Update の診断と更新は動作しません。",
+            "停止并禁用启动 Alienware Command Center 代理 (模式、电源、灯光) 的 Dell TechHub 服务，使 AWCC 不再干扰。不会卸载任何内容: 关闭此选项即可恢复服务。AWCC 关闭期间，SupportAssist / Dell Update 的诊断和更新无法使用。",
+        },
+        ["awccoff.confirm"] = new[]
+        {
+            "Остановить и отключить службу Dell TechHub вместе с агентами AWCC?\n\nРежимы, вентиляторы и подсветка продолжат работать через Alien Helper. Пока AWCC отключён, не работают диагностика и обновления SupportAssist / Dell Update. Вернуть можно этим же тумблером.",
+            "Stop and disable the Dell TechHub service along with AWCC's agents?\n\nModes, fans and lighting keep working through Alien Helper. While AWCC is off, SupportAssist / Dell Update diagnostics and updates do not work. The same switch brings it back.",
+            "Arrêter et désactiver le service Dell TechHub ainsi que les agents d'AWCC ?\n\nLes modes, les ventilateurs et l'éclairage continuent de fonctionner via Alien Helper. Tant qu'AWCC est désactivé, les diagnostics et mises à jour SupportAssist / Dell Update ne fonctionnent pas. La même option le rétablit.",
+            "¿Detener y desactivar el servicio Dell TechHub junto con los agentes de AWCC?\n\nLos modos, ventiladores e iluminación siguen funcionando a través de Alien Helper. Mientras AWCC está desactivado, los diagnósticos y actualizaciones de SupportAssist / Dell Update no funcionan. La misma opción lo restaura.",
+            "Dell TechHub サービスと AWCC のエージェントを停止・無効化しますか?\n\nモード、ファン、ライティングは Alien Helper で引き続き動作します。AWCC がオフの間、SupportAssist / Dell Update の診断と更新は動作しません。同じスイッチで元に戻せます。",
+            "停止并禁用 Dell TechHub 服务及 AWCC 代理?\n\n模式、风扇和灯光将继续通过 Alien Helper 工作。AWCC 关闭期间，SupportAssist / Dell Update 的诊断和更新无法使用。用同一开关即可恢复。",
+        },
+        ["err.awcc"] = new[]
+        {
+            "Не удалось изменить службу Dell TechHub. Подробности в журнале.",
+            "Could not change the Dell TechHub service. See the log for details.",
+            "Impossible de modifier le service Dell TechHub. Voir le journal.",
+            "No se pudo cambiar el servicio Dell TechHub. Consulte el registro.",
+            "Dell TechHub サービスを変更できませんでした。詳細はログを参照してください。",
+            "无法更改 Dell TechHub 服务。详情请查看日志。",
+        },
         ["opt.holdgpu"] = new[] { "Удерживать мощность GPU в Alien Mode", "Hold GPU power in Alien Mode", "Maintenir la puissance du GPU en Alien Mode", "Mantener la potencia de la GPU en Alien Mode", "Alien Mode で GPU の電力を維持", "在 Alien Mode 下保持 GPU 功率" },
         ["opt.holdgpu.tip"] = new[]
         {
