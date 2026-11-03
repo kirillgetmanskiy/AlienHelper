@@ -13,6 +13,7 @@ public static class Log
 
     /// <summary>Public source code (shown in About).</summary>
     public const string RepoUrl = "https://github.com/kirillgetmanskiy/AlienHelper";
+    public const string StoreUrl = "https://apps.microsoft.com/detail/9PC5V3BMXDWP";   // buying it there is the way to support the project
     public const string ContactEmail = "kirill.getmanskiy@gmail.com";
 
     static readonly object _lock = new();
