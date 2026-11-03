@@ -434,6 +434,7 @@ public static class L
         ["io.write"] = new[] { "Запись", "Write", "Écriture", "Escritura", "書き込み", "写入" },
         ["io.short"] = new[] { "Ч {0} · З {1}", "R {0} · W {1}", "L {0} · É {1}", "L {0} · E {1}", "R {0} · W {1}", "读 {0} · 写 {1}" },
         ["about.version"] = new[] { "Версия {0}", "Version {0}", "Version {0}", "Versión {0}", "バージョン {0}", "版本 {0}" },
+        ["about.support"] = new[] { "Поддержать проект", "Support the project", "Soutenir le projet", "Apoyar el proyecto", "プロジェクトを支援", "支持本项目" },
         ["about.source"] = new[] { "Исходный код", "Source code", "Code source", "Código fuente", "ソース コード", "源代码" },
         ["about.contact"] = new[] { "Связь с автором: {0}", "Contact the author: {0}", "Contacter l'auteur : {0}", "Contacto con el autor: {0}", "作者への連絡: {0}", "联系作者：{0}" },
         ["diag.title"] = new[] { "Диагностика", "Diagnostics", "Diagnostic", "Diagnóstico", "診断", "诊断" },

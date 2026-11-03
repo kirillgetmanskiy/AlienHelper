@@ -43,8 +43,9 @@ public sealed class AboutForm : Form
         Controls.Add(text);
         y = text.Bottom + S(14);
 
-        // links: source code and the author
+        // links: source code, support and the author
         y = Link(L.T("about.source"), Log.RepoUrl, Log.RepoUrl, y);
+        y = Link(L.T("about.support"), "Microsoft Store", Log.StoreUrl, y);
         y = Link(L.T("about.contact", "").TrimEnd(' ', ':', '：'), Log.ContactEmail, "mailto:" + Log.ContactEmail, y);
         y += S(10);
 

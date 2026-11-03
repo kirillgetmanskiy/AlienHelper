@@ -12,6 +12,11 @@ It uses the same interfaces as AWCC:
 The protocol comes from [T-Troll/alienfx-tools](https://github.com/T-Troll/alienfx-tools) and the Linux driver
 [`alienware-wmi-wmax.c`](https://github.com/torvalds/linux/blob/master/drivers/platform/x86/dell/alienware-wmi-wmax.c).
 
+## Support the project
+
+Alien Helper is free and open source. If it is useful to you, you can support its development by getting it from the
+[Microsoft Store](https://apps.microsoft.com/detail/9PC5V3BMXDWP); the Store keeps it up to date.
+
 ## Features
 
 - Modes: Balanced, Balanced Performance, Cool, Quiet, Performance, Alien Mode. The list is read from the firmware.

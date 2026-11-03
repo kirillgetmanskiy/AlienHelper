@@ -12,6 +12,11 @@
 Протокол взят из [T-Troll/alienfx-tools](https://github.com/T-Troll/alienfx-tools) и Linux-драйвера
 [`alienware-wmi-wmax.c`](https://github.com/torvalds/linux/blob/master/drivers/platform/x86/dell/alienware-wmi-wmax.c).
 
+## Поддержать проект
+
+Alien Helper бесплатный и с открытым кодом. Если программа вам пригодилась, поддержать разработку можно, купив её в
+[Microsoft Store](https://apps.microsoft.com/detail/9PC5V3BMXDWP), а Store будет сам его обновлять.
+
 ## Возможности
 
 - Режимы: Balanced, Balanced Performance, Cool, Quiet, Performance, Alien Mode. Список читается из прошивки.
