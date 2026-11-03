@@ -273,6 +273,23 @@ public sealed class SettingsForm : Form
             guard.Toggled += (_, _) => { _c.S.GuardLights = guard.On; _c.S.Save(); if (guard.On) Task.Run(_c.EnforceLights); };
             new ToolTip { AutoPopDelay = 15000, InitialDelay = 300 }.SetToolTip(guard, L.T("opt.guardlights.tip"));
         }
+        if (AwccService.Installed)
+        {
+            var awcc = AddToggle(card, ref cy, new Toggle(L.T("opt.awccoff")) { On = AwccService.IsOff });
+            new ToolTip { AutoPopDelay = 20000, InitialDelay = 300 }.SetToolTip(awcc, L.T("opt.awccoff.tip"));
+            awcc.Toggled += async (_, _) =>
+            {
+                bool off = awcc.On;
+                if (off && MessageBox.Show(this, L.T("awccoff.confirm"), Log.AppTitle, MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+                {
+                    awcc.On = false;
+                    return;
+                }
+                bool ok = await Task.Run(() => off ? AwccService.TurnOff(_c.S) : AwccService.TurnOn(_c.S));
+                awcc.On = await Task.Run(() => AwccService.IsOff);
+                if (!ok) MessageBox.Show(this, L.T("err.awcc"), Log.AppTitle);
+            };
+        }
         if (_c.Awcc?.Profiles.Contains(Hardware.Awcc.ProfileGMode) == true)
         {
             var hold = AddToggle(card, ref cy, new Toggle(L.T("opt.holdgpu")) { On = _c.S.HoldGpuPower });
