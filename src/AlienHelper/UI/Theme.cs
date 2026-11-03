@@ -117,6 +117,9 @@ public static class Theme
         return new Restore(() => Set(was));
     }
 
+    /// <summary>Red for what does not work here (the limited mode card): the same in every theme, a warning should look like one.</summary>
+    public static Color Danger => IsDark ? Hex("#FF5252") : Hex("#D32F2F");
+
     /// <summary>Background of the overlay windows (call inside <see cref="UseOverlay"/>).</summary>
     public static Color OverlayBack => Current.Overlay ? Blend(Bg, Color.Black, 0.25f) : Color.FromArgb(10, 12, 16);
 

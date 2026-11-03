@@ -26,6 +26,7 @@ public sealed class CoreTemps : IDisposable
 
     /// <summary>What <see cref="TryOpen"/> says when the driver is not in the system (the windows then recommend it).</summary>
     public const string NotInstalled = "PawnIO driver not installed";
+    public const string NotIntel = "not an Intel CPU";
     /// <summary>Screenshot mode ("nopawnio"): behave as if the driver were missing.</summary>
     internal static bool PretendMissing;
 
@@ -42,7 +43,7 @@ public sealed class CoreTemps : IDisposable
     {
         try
         {
-            if (!IsIntel()) { why = "not an Intel CPU"; return null; }
+            if (!IsIntel()) { why = NotIntel; return null; }
             var dir = PretendMissing ? null : PawnIoDir();
             if (dir == null) { why = NotInstalled; return null; }
             var libPath = Path.Combine(dir, "PawnIOLib.dll");

@@ -491,14 +491,24 @@ public static class L
             "前回 Alien Helper はエラーで終了しました。作者向けのレポートを作成しますか?",
             "Alien Helper 上次因错误退出。要为作者生成报告吗？",
         },
-        ["hw.unsupported"] = new[]
+        ["hw.limited.title"] = new[] { "Ограниченный режим", "Limited mode", "Mode limité", "Modo limitado", "制限モード", "受限模式" },
+        ["hw.limited"] = new[]
         {
-            "Не найден интерфейс управления Alienware (AWCC WMI).\n\nAlien Helper рассчитан на ноутбуки Alienware; на этом устройстве ({0}) режимы питания, вентиляторы и датчики недоступны. Программа продолжит работу с ограниченными функциями.\n\nЕсли это ноутбук Alienware, запустите программу от имени администратора.",
-            "The Alienware control interface (AWCC WMI) was not found.\n\nAlien Helper is made for Alienware laptops; on this device ({0}) power modes, fans and sensors are unavailable. The app will keep running with limited features.\n\nIf this is an Alienware laptop, run the app as administrator.",
-            "L'interface de contrôle Alienware (AWCC WMI) est introuvable.\n\nAlien Helper est conçu pour les portables Alienware ; sur cet appareil ({0}), modes d'alimentation, ventilateurs et capteurs sont indisponibles. L'application continue avec des fonctions limitées.\n\nS'il s'agit d'un portable Alienware, lancez l'application en tant qu'administrateur.",
-            "No se encontró la interfaz de control de Alienware (AWCC WMI).\n\nAlien Helper está hecho para portátiles Alienware; en este equipo ({0}) los modos de energía, ventiladores y sensores no están disponibles. La aplicación seguirá con funciones limitadas.\n\nSi es un portátil Alienware, ejecuta la aplicación como administrador.",
-            "Alienware 制御インターフェイス (AWCC WMI) が見つかりません。\n\nAlien Helper は Alienware ノート PC 用です。このデバイス ({0}) では電源モード、ファン、センサーを使用できません。機能を制限して動作を続けます。\n\nAlienware の場合は管理者として実行してください。",
-            "未找到 Alienware 控制接口（AWCC WMI）。\n\nAlien Helper 专为 Alienware 笔记本设计；此设备（{0}）上无法使用电源模式、风扇和传感器。应用将以受限功能继续运行。\n\n如果这是 Alienware 笔记本，请以管理员身份运行。",
+            "{0} — не Alienware, поэтому режимы питания, вентиляторы, подсветка и датчики Alienware недоступны. Работает мониторинг: процессор, видеокарта NVIDIA, память, диски, сеть и питание.",
+            "{0} is not an Alienware, so power modes, fans, lighting and Alienware sensors are unavailable. Monitoring works: CPU, NVIDIA GPU, memory, disks, network and power.",
+            "{0} n'est pas un Alienware : modes d'alimentation, ventilateurs, éclairage et capteurs Alienware sont indisponibles. La surveillance fonctionne : processeur, GPU NVIDIA, mémoire, disques, réseau et alimentation.",
+            "{0} no es un Alienware, así que los modos de energía, ventiladores, iluminación y sensores de Alienware no están disponibles. La monitorización funciona: CPU, GPU NVIDIA, memoria, discos, red y energía.",
+            "{0} は Alienware ではないため、電源モード、ファン、ライティング、Alienware のセンサーは使用できません。監視は動作します: CPU、NVIDIA GPU、メモリ、ディスク、ネットワーク、電源。",
+            "{0} 不是 Alienware，因此电源模式、风扇、灯光和 Alienware 传感器不可用。监控可用：CPU、NVIDIA GPU、内存、磁盘、网络和电源。",
+        },
+        ["hw.limited.admin"] = new[]
+        {
+            "Не найден интерфейс управления Alienware (AWCC WMI): режимы питания, вентиляторы и подсветка недоступны. Если это Alienware, запустите программу от имени администратора.",
+            "The Alienware control interface (AWCC WMI) was not found: power modes, fans and lighting are unavailable. If this is an Alienware, run the app as administrator.",
+            "Interface de contrôle Alienware (AWCC WMI) introuvable : modes d'alimentation, ventilateurs et éclairage indisponibles. S'il s'agit d'un Alienware, lancez l'application en tant qu'administrateur.",
+            "No se encontró la interfaz de control de Alienware (AWCC WMI): modos de energía, ventiladores e iluminación no disponibles. Si es un Alienware, ejecuta la aplicación como administrador.",
+            "Alienware 制御インターフェイス (AWCC WMI) が見つかりません: 電源モード、ファン、ライティングは使用できません。Alienware の場合は管理者として実行してください。",
+            "未找到 Alienware 控制接口（AWCC WMI）：电源模式、风扇和灯光不可用。如果这是 Alienware，请以管理员身份运行。",
         },
         ["hw.untested"] = new[]
         {
@@ -533,6 +543,16 @@ public static class L
         ["ch.clocks"] = new[] { "Частоты", "Clocks", "Fréquences", "Frecuencias", "クロック", "频率" },
         ["ch.memory"] = new[] { "Память", "Memory", "Mémoire", "Memoria", "メモリ", "内存" },
         ["ch.cores"] = new[] { "Ядра процессора — {0}%   ·   {1} P + {2} E", "CPU cores — {0}%   ·   {1} P + {2} E", "Cœurs du processeur — {0} %   ·   {1} P + {2} E", "Núcleos de CPU — {0}%   ·   {1} P + {2} E", "CPU コア — {0}%   ·   {1} P + {2} E", "CPU 核心 — {0}%   ·   {1} P + {2} E" },
+        ["ch.cores.flat"] = new[] { "Ядра процессора — {0}%   ·   {1} потоков", "CPU cores — {0}%   ·   {1} threads", "Cœurs du processeur — {0} %   ·   {1} threads", "Núcleos de CPU — {0}%   ·   {1} hilos", "CPU コア — {0}%   ·   {1} スレッド", "CPU 核心 — {0}%   ·   {1} 线程" },
+        ["ch.coretemp.intel"] = new[]
+        {
+            "Температура отдельных ядер читается только на процессорах Intel",
+            "Per-core temperatures are read on Intel CPUs only",
+            "Les températures par cœur ne sont lues que sur les processeurs Intel",
+            "Las temperaturas por núcleo solo se leen en CPU Intel",
+            "コアごとの温度は Intel CPU でのみ読み取れます",
+            "仅 Intel 处理器可读取各核心温度",
+        },
         ["ch.cores.loading"] = new[] { "Ядра процессора — загрузка…", "CPU cores — loading…", "Cœurs du processeur — chargement…", "Núcleos de CPU — cargando…", "CPU コア — 読み込み中…", "CPU 核心 — 加载中…" },
         ["ch.coretemp"] = new[]
         {

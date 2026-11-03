@@ -52,6 +52,7 @@ public sealed class MainForm : Form
         _cardsTop = y;
         Controls.Add(_view);
         _cpu.Title = SystemInfo.CpuName.Length > 0 ? SystemInfo.CpuName : "CPU";
+        if (_c.Awcc == null) y = BuildUnsupported(y);
         y = BuildChip(y, "cpu", _cpu, _ram, Controller.CpuSensor, out _cpuChip);
         y = BuildChip(y, "gpu", _gpu, _vram, Controller.GpuSensor, out _gpuChip);
         y = BuildSsd(y);
@@ -548,6 +549,21 @@ public sealed class MainForm : Form
 
     /// <summary>Opens the fan curve editor (set by the tray app).</summary>
     public Action? OpenCurves { get; set; }
+    /// <summary>No Alienware firmware: a red card says what is missing here and what still works.</summary>
+    int BuildUnsupported(int y)
+    {
+        var card = AddCard("unsupported", new Card { Caption = "⚠  " + L.T("hw.limited.title"), Tone = Danger });
+        var font = Theme.Font(9f);
+        string model = SystemInfo.Model;
+        string text = model.Contains("Alienware", StringComparison.OrdinalIgnoreCase) || model.Length == 0
+            ? L.T("hw.limited.admin") : L.T("hw.limited", model);
+        var lbl = new Label { Text = text, Font = font, ForeColor = Blend(Muted, Fg, 0.6f), BackColor = Blend(Theme.Card, Danger, 0.10f), AutoSize = false };
+        lbl.Bounds = new Rectangle(S(Pad), card.ContentTop, Inner, TextRenderer.MeasureText(text, font, new Size(Inner, 0), TextFormatFlags.WordBreak).Height + S(4));
+        card.Controls.Add(lbl);
+        card.SetBounds(S(M), y, CardW, lbl.Bottom + S(Pad));
+        return card.Bottom + S(Gap);
+    }
+
     /// <summary>Custom entered or left (any window, the tray, the G key): relayout the boost area.</summary>
     public void RefreshBoost() { LayoutBoost(); Reflow(); }
     readonly Slider _boostCpu = new(), _boostGpu = new();

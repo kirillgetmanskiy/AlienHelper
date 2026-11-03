@@ -20,6 +20,7 @@ public sealed class ChartsForm : Form
     static Color[] DiskColors => new[] { Data("#C9A7FF"), Data("#8FD3FF"), Data("#FFE08A") };
     static Color[] ReadColors => new[] { Data("#62D2FF"), Data("#C9A7FF"), Data("#8FFFD0") };
     static Color[] WriteColors => new[] { Data("#FF8A3D"), Data("#FFE08A"), Data("#FF6B8B") };
+    bool _clocksFlat;   // the clocks chart shows one CPU line (no P/E cores)
     readonly Label _coreHeader = new() { AutoSize = false, ForeColor = Fg, Font = Semibold(10.5f), Text = L.T("ch.cores.loading") };
     readonly Label _coreNote = new()
     {
@@ -103,7 +104,7 @@ public sealed class ChartsForm : Form
         {
             var t = new CoreTile
             {
-                Title = L.T("ch.core", core.Performance ? "P" : "E", core.Index),
+                Title = _mon.Hybrid ? L.T("ch.core", core.Performance ? "P" : "E", core.Index) : $"CPU {core.Index}",
                 Performance = core.Performance,
                 Capacity = SensorMonitor.CoreCapacity,
                 Tag = core,
@@ -212,8 +213,16 @@ public sealed class ChartsForm : Form
             Copy(drv.Writes, w.Values);
             io = Math.Max(io, Math.Max(r.Values.DefaultIfEmpty(0).Max(), w.Values.DefaultIfEmpty(0).Max()));
         }
+        if (!_clocksFlat && !_mon.Hybrid)
+        {
+            // one kind of core (AMD, older Intel): one CPU line instead of P-core and E-core
+            _clocksFlat = true;
+            var p = _clocks.Series[0];
+            _clocks.Series[0] = new Series { Name = "CPU", Color = p.Color, Unit = p.Unit };
+            _clocks.Series.RemoveAt(1);
+        }
         Copy(_mon.PClock, _clocks.Series[0].Values);
-        Copy(_mon.EClock, _clocks.Series[1].Values);
+        if (!_clocksFlat) Copy(_mon.EClock, _clocks.Series[1].Values);
         Copy(_mon.RamUsed, _memory.Series[0].Values);
         // one line per NVIDIA GPU; numbered only when there is more than one
         var gpus = _mon.Gpus;
@@ -266,9 +275,9 @@ public sealed class ChartsForm : Form
         if (_mon.Cores.Count > 0)
         {
             int p = _mon.Cores.Count(c => c.Performance), e = _mon.Cores.Count - p;
-            _coreHeader.Text = L.T("ch.cores", _mon.CpuLoad.ToString("0"), p, e);
+            _coreHeader.Text = _mon.Hybrid ? L.T("ch.cores", _mon.CpuLoad.ToString("0"), p, e) : L.T("ch.cores.flat", _mon.CpuLoad.ToString("0"), p);
             int hot = _mon.Cores.Select(c => c.Temp).DefaultIfEmpty(-1).Max();
-            _coreNote.Text = hot > 0 ? L.T("ch.coretemp.on", hot) : L.T("ch.coretemp");
+            _coreNote.Text = hot > 0 ? L.T("ch.coretemp.on", hot) : _mon.CoreTempsUnsupported ? L.T("ch.coretemp.intel") : L.T("ch.coretemp");
         }
     }
 
