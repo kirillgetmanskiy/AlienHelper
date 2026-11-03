@@ -37,7 +37,8 @@ public sealed class Card : Panel
     public string Caption { get; set; } = "";
     public string? Hint { get; set; }
     /// <summary>A warning card: tinted fill, border and caption in this color.</summary>
-    public Color? Tone { get; set; }
+    Color? _tone;
+    public Color? Tone { get => _tone; set { _tone = value; BackColor = value is { } t ? Blend(Theme.Card, t, 0.10f) : Theme.Card; } }   // children (labels, button corners) sit on the tinted fill
     public int ContentTop => Caption.Length > 0 ? S(40) : S(14);
 
     public Card()
@@ -737,6 +738,25 @@ public static class Glyphs
         float d = Sf(4f);
         using var dot = new SolidBrush(Accent);
         FillDot(g, dot, new RectangleF(pts[^1].X - d / 2, pts[^1].Y - d / 2, d, d));
+    }
+
+    /// <summary>Warning: an exclamation mark in the warning color, whatever the button's text color.</summary>
+    public static void Warning(Graphics g, RectangleF r, Color fg)
+    {
+        float cx = r.Left + r.Width / 2f, w = Sf(2.6f);
+        using (var bar = new Pen(Warn, w) { StartCap = LineCap.Round, EndCap = LineCap.Round })
+            g.DrawLine(bar, cx, r.Top + r.Height * 0.08f, cx, r.Top + r.Height * 0.62f);
+        float d = Sf(3.2f);
+        using var dot = new SolidBrush(Warn);
+        FillDot(g, dot, new RectangleF(cx - d / 2, r.Bottom - d - r.Height * 0.02f, d, d));
+    }
+
+    /// <summary>Fold up: a chevron pointing up.</summary>
+    public static void Fold(Graphics g, RectangleF r, Color fg)
+    {
+        PointF P(float x, float y) => new(r.Left + r.Width * x, r.Top + r.Height * y);
+        using var pen = new Pen(fg, Sf(1.6f)) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round };
+        g.DrawLines(pen, new[] { P(0.18f, 0.66f), P(0.5f, 0.34f), P(0.82f, 0.66f) });
     }
 }
 
