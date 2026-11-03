@@ -41,6 +41,16 @@ Copy-Item "$PSScriptRoot\app\licenses" $layout -Recurse
 (Get-Content "$msix\Package.appxmanifest" -Raw).Replace('$VERSION$', $msixVersion) |
     Set-Content "$layout\AppxManifest.xml" -Encoding UTF8
 
+# resources.pri: without it Windows ignores the size-specific logos (Assets\*.targetsize-*.png) and draws the 44 px one
+# on a plate in the taskbar
+$makepri = Join-Path (Split-Path $makeappx) 'makepri.exe'
+$priConfig = "$msix\priconfig.xml"
+& $makepri createconfig /cf $priConfig /dq en-US /pv 10.0.0 /o | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "makepri createconfig failed ($LASTEXITCODE)" }
+& $makepri new /pr $layout /cf $priConfig /mn "$layout\AppxManifest.xml" /of "$layout\resources.pri" /o | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "makepri new failed ($LASTEXITCODE)" }
+Remove-Item $priConfig
+
 if ($SignCmd) {
     & cmd.exe /c $SignCmd.Replace('$f', "`"$layout\AlienHelper.exe`"")
     if ($LASTEXITCODE -ne 0) { throw "signing AlienHelper.exe failed ($LASTEXITCODE)" }
