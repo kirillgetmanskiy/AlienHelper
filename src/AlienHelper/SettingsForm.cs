@@ -273,10 +273,7 @@ public sealed class SettingsForm : Form
             guard.Toggled += (_, _) => { _c.S.GuardLights = guard.On; _c.S.Save(); if (guard.On) Task.Run(_c.EnforceLights); };
             new ToolTip { AutoPopDelay = 15000, InitialDelay = 300 }.SetToolTip(guard, L.T("opt.guardlights.tip"));
         }
-        if (Autostart.Supported)
-        {
-            // starts at sign-in through the Run key; Windows then shows the UAC prompt
-            if (AwccService.Installed)
+        if (AwccService.Installed)
         {
             var awcc = AddToggle(card, ref cy, new Toggle(L.T("opt.awccoff")) { Enabled = !Launcher.IsLimited, On = AwccService.IsOff });
             new ToolTip { AutoPopDelay = 20000, InitialDelay = 300 }.SetToolTip(awcc, L.T("opt.awccoff.tip"));
@@ -299,7 +296,10 @@ public sealed class SettingsForm : Form
             hold.Toggled += (_, _) => { _c.S.HoldGpuPower = hold.On; _c.S.Save(); };
             new ToolTip { AutoPopDelay = 15000, InitialDelay = 300 }.SetToolTip(hold, L.T("opt.holdgpu.tip"));
         }
-        var startup = AddToggle(card, ref cy, new Toggle(L.T("opt.autostart")) { On = Autostart.IsEnabled() });
+        if (Autostart.Supported)
+        {
+            // starts at sign-in through the Run key; Windows then shows the UAC prompt
+            var startup = AddToggle(card, ref cy, new Toggle(L.T("opt.autostart")) { On = Autostart.IsEnabled() });
             startup.Toggled += async (_, _) =>
             {
                 bool want = startup.On;
