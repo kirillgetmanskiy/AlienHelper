@@ -53,7 +53,7 @@ public sealed class MainForm : Form
         Controls.Add(_view);
         _cpu.Title = SystemInfo.CpuName.Length > 0 ? SystemInfo.CpuName : "CPU";
         if (Launcher.IsLimited) y = BuildLimited(y);
-        if (_c.Awcc == null && !Launcher.IsLimited) y = BuildUnsupported(y);
+        if (Unsupported) y = BuildUnsupported(y);
         y = BuildChip(y, "cpu", _cpu, _ram, Controller.CpuSensor, out _cpuChip);
         y = BuildChip(y, "gpu", _gpu, _vram, Controller.GpuSensor, out _gpuChip);
         y = BuildSsd(y);
@@ -109,8 +109,18 @@ public sealed class MainForm : Form
         _tips.SetToolTip(charts, L.T("btn.charts"));
         charts.Click += (_, _) => _openCharts();
         Controls.Add(charts);
+        int right = charts.Left;
+        if (Unsupported)
+        {
+            _warnBadge = new PillButton("!") { Size = gear.Size, Subtle = true, Glyph = Glyphs.Warning, Visible = false };
+            _warnBadge.Location = new Point(charts.Left - S(6) - _warnBadge.Width, gear.Top);
+            _tips.SetToolTip(_warnBadge, L.T("hw.limited.title"));
+            _warnBadge.Click += (_, _) => SetUnsupportedCollapsed(false);
+            Controls.Add(_warnBadge);
+            right = _warnBadge.Left;
+        }
         // a wide font (a theme file may name one) must not run the model under the buttons: it ends in "…" instead
-        int room = charts.Left - S(8) - sub.Left, codeW = codeLbl?.PreferredWidth ?? 0;
+        int room = right - S(8) - sub.Left, codeW = codeLbl?.PreferredWidth ?? 0;
         if (sub.PreferredWidth + codeW > room)
         {
             sub.AutoSize = false;
@@ -449,6 +459,7 @@ public sealed class MainForm : Form
         var hidden = _c.S.HiddenCards;
         if (_cards.All(x => hidden.Contains(x.id))) hidden.Remove(_cards[0].id);
         foreach (var (id, card) in _cards) card.Visible = !hidden.Contains(id);
+        if (_warnBadge != null) _warnBadge.Visible = hidden.Contains("unsupported");
         Reflow();
     }
 
@@ -556,14 +567,32 @@ public sealed class MainForm : Form
 
     /// <summary>Limited mode (no admin rights): what is missing and a button that restarts the app elevated.</summary>
     /// <summary>No Alienware firmware: a red card says what is missing here and what still works.</summary>
+    /// <summary>Modes are out of reach on this laptop: a warning card on top, which folds into a "!" in the header.</summary>
+    bool Unsupported => _c.Awcc == null && !Launcher.IsLimited;
+    PillButton? _warnBadge;
+
+    /// <summary>Folds the warning card into the header badge, or opens it again; remembered across starts.</summary>
+    void SetUnsupportedCollapsed(bool collapsed)
+    {
+        _c.S.HiddenCards.Remove("unsupported");
+        if (collapsed) _c.S.HiddenCards.Add("unsupported");
+        _c.S.Save();
+        ApplyCards();
+    }
+
     int BuildUnsupported(int y)
     {
-        var card = AddCard("unsupported", new Card { Caption = "⚠  " + L.T("hw.limited.title"), Tone = Danger });
+        var card = AddCard("unsupported", new Card { Caption = "⚠  " + L.T("hw.limited.title"), Tone = Warn });
+        var fold = new PillButton("▴") { Size = new Size(S(28), S(24)), Subtle = true, Glyph = Glyphs.Fold };
+        fold.Location = new Point(CardW - S(10) - fold.Width, S(9));
+        _tips.SetToolTip(fold, L.T("hw.limited.fold"));
+        fold.Click += (_, _) => SetUnsupportedCollapsed(true);
+        card.Controls.Add(fold);
         var font = Theme.Font(9f);
         string model = SystemInfo.Model;
         string text = model.Contains("Alienware", StringComparison.OrdinalIgnoreCase) || model.Length == 0
             ? L.T("hw.limited.admin") : L.T("hw.limited", model);
-        var lbl = new Label { Text = text, Font = font, ForeColor = Blend(Muted, Fg, 0.6f), BackColor = Blend(Theme.Card, Danger, 0.10f), AutoSize = false };
+        var lbl = new Label { Text = text, Font = font, ForeColor = Blend(Muted, Fg, 0.6f), BackColor = Blend(Theme.Card, Warn, 0.10f), AutoSize = false };
         lbl.Bounds = new Rectangle(S(Pad), card.ContentTop, Inner, TextRenderer.MeasureText(text, font, new Size(Inner, 0), TextFormatFlags.WordBreak).Height + S(4));
         card.Controls.Add(lbl);
         card.SetBounds(S(M), y, CardW, lbl.Bottom + S(Pad));

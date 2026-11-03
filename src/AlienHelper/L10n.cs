@@ -515,6 +515,7 @@ public static class L
             "前回 Alien Helper はエラーで終了しました。作者向けのレポートを作成しますか?",
             "Alien Helper 上次因错误退出。要为作者生成报告吗？",
         },
+        ["hw.limited.fold"] = new[] { "Свернуть", "Collapse", "Réduire", "Contraer", "折りたたむ", "收起" },
         ["hw.limited.title"] = new[] { "Ограниченный режим", "Limited mode", "Mode limité", "Modo limitado", "制限モード", "受限模式" },
         ["hw.limited"] = new[]
         {
