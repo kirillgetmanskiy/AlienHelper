@@ -36,6 +36,8 @@ public sealed class Card : Panel
 {
     public string Caption { get; set; } = "";
     public string? Hint { get; set; }
+    /// <summary>A warning card: tinted fill, border and caption in this color.</summary>
+    public Color? Tone { get; set; }
     public int ContentTop => Caption.Length > 0 ? S(40) : S(14);
 
     public Card()
@@ -51,14 +53,14 @@ public sealed class Card : Panel
         g.Clear(Parent?.BackColor ?? Bg);
         Smooth(g);
         using var path = Round(new RectangleF(0.5f, 0.5f, Width - 1, Height - 1), Sf(12));
-        using var fill = new SolidBrush(Theme.Card);
-        using var pen = new Pen(Border);
+        using var fill = new SolidBrush(Tone is { } t ? Blend(Theme.Card, t, 0.10f) : Theme.Card);
+        using var pen = new Pen(Tone is { } tb ? Color.FromArgb(170, tb) : Border, Tone != null ? Sf(1.4f) : 1f);
         g.FillPath(fill, path);
         g.DrawPath(pen, path);
         if (Caption.Length > 0)
         {
             using var f = Semibold(10.5f);
-            TextRenderer.DrawText(g, Caption, f, new Point(S(16), S(12)), Fg);
+            TextRenderer.DrawText(g, Caption, f, new Point(S(16), S(12)), Tone ?? Fg);
             if (Hint != null)
             {
                 using var hf = Theme.Font(8.5f);

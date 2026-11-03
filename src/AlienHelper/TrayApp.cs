@@ -436,7 +436,8 @@ public sealed class TrayApp : ApplicationContext
         if (Launcher.IsLimited) return;   // without admin rights the firmware is closed anyway; the main window says so
         if (_c.Awcc == null)
         {
-            MessageBox.Show(L.T("hw.unsupported", model.Length > 0 ? model : "?"), Log.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            // said by the red "Limited mode" card in the main window, not by a message at every start
+            Log.Info($"no Alienware firmware on '{model}': limited mode");
             return;
         }
         if (!Hardware.SystemInfo.IsTestedModel && _c.S.UntestedModelWarned != model)

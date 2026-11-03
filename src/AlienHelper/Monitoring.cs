@@ -69,6 +69,10 @@ public sealed class SensorMonitor : IDisposable
 
     // detailed
     public IReadOnlyList<CoreMonitor.Core> Cores => _cores.Cores;
+    /// <summary>The CPU has P and E cores; known once the cores are open (until then, true).</summary>
+    public bool Hybrid => !_coresOpen || _cores.Hybrid;
+    /// <summary>Per-core temperatures are read through PawnIO's Intel module: not on other CPUs.</summary>
+    public bool CoreTempsUnsupported => CoreTempsStatus == CoreTemps.NotIntel;
     public float CpuLoad { get; private set; } = -1;
     public float PClockMhz { get; private set; } = -1;
     public float EClockMhz { get; private set; } = -1;
@@ -397,7 +401,7 @@ public sealed class SensorMonitor : IDisposable
                 if (need.HasFlag(Need.CoreTemps) && core.Temp > 0) Push(core.Temps, core.Temp, CoreCapacity);
             }
             var p = _cores.Cores.Where(x => x.Performance).Select(x => x.Mhz).DefaultIfEmpty(-1).Max();
-            var e = _cores.Cores.Where(x => !x.Performance).Select(x => x.Mhz).DefaultIfEmpty(-1).Max();
+            var e = _cores.Hybrid ? _cores.Cores.Where(x => !x.Performance).Select(x => x.Mhz).DefaultIfEmpty(-1).Max() : -1;
             PClockMhz = p; EClockMhz = e;
             if (p > 0) Push(PClock, p / 1000f);
             if (e > 0) Push(EClock, e / 1000f);
@@ -664,6 +668,8 @@ public sealed class CoreMonitor : IDisposable
     }
 
     public List<Core> Cores { get; } = new();
+    /// <summary>P and E cores (Intel hybrid); false when all cores are of one kind.</summary>
+    public bool Hybrid { get; private set; }
     public float TotalLoad { get; private set; }
     PerformanceCounter? _total;
 
@@ -673,6 +679,9 @@ public sealed class CoreMonitor : IDisposable
         const string cat = "Processor Information";
         var eff = EfficiencyClasses();
         byte maxClass = eff.Count > 0 ? eff.Values.Max() : (byte)0;
+        // P and E cores only when Windows reports more than one efficiency class (Intel hybrid); AMD and older Intel
+        // CPUs have one kind of core
+        Hybrid = eff.Values.Distinct().Count() > 1;
         _total = new PerformanceCounter(cat, "% Processor Utility", "_Total");
         int n = Environment.ProcessorCount;
         for (int i = 0; i < n; i++)
@@ -681,7 +690,7 @@ public sealed class CoreMonitor : IDisposable
             Cores.Add(new Core
             {
                 Index = i,
-                Performance = eff.TryGetValue(i, out var c) && c == maxClass && maxClass > 0,
+                Performance = !Hybrid || eff.TryGetValue(i, out var c) && c == maxClass,
                 Util = new PerformanceCounter(cat, "% Processor Utility", inst),
                 Perf = new PerformanceCounter(cat, "% Processor Performance", inst),
                 Base = new PerformanceCounter(cat, "Processor Frequency", inst),

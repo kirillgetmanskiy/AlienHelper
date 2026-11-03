@@ -53,6 +53,7 @@ public sealed class MainForm : Form
         Controls.Add(_view);
         _cpu.Title = SystemInfo.CpuName.Length > 0 ? SystemInfo.CpuName : "CPU";
         if (Launcher.IsLimited) y = BuildLimited(y);
+        if (_c.Awcc == null && !Launcher.IsLimited) y = BuildUnsupported(y);
         y = BuildChip(y, "cpu", _cpu, _ram, Controller.CpuSensor, out _cpuChip);
         y = BuildChip(y, "gpu", _gpu, _vram, Controller.GpuSensor, out _gpuChip);
         y = BuildSsd(y);
@@ -554,6 +555,21 @@ public sealed class MainForm : Form
     public Action? RestartElevated { get; set; }
 
     /// <summary>Limited mode (no admin rights): what is missing and a button that restarts the app elevated.</summary>
+    /// <summary>No Alienware firmware: a red card says what is missing here and what still works.</summary>
+    int BuildUnsupported(int y)
+    {
+        var card = AddCard("unsupported", new Card { Caption = "⚠  " + L.T("hw.limited.title"), Tone = Danger });
+        var font = Theme.Font(9f);
+        string model = SystemInfo.Model;
+        string text = model.Contains("Alienware", StringComparison.OrdinalIgnoreCase) || model.Length == 0
+            ? L.T("hw.limited.admin") : L.T("hw.limited", model);
+        var lbl = new Label { Text = text, Font = font, ForeColor = Blend(Muted, Fg, 0.6f), BackColor = Blend(Theme.Card, Danger, 0.10f), AutoSize = false };
+        lbl.Bounds = new Rectangle(S(Pad), card.ContentTop, Inner, TextRenderer.MeasureText(text, font, new Size(Inner, 0), TextFormatFlags.WordBreak).Height + S(4));
+        card.Controls.Add(lbl);
+        card.SetBounds(S(M), y, CardW, lbl.Bottom + S(Pad));
+        return card.Bottom + S(Gap);
+    }
+
     int BuildLimited(int y)
     {
         var card = AddCard("limited", new Card { Caption = L.T("limited.title") });
