@@ -27,9 +27,27 @@ public sealed class OverlayManager : IDisposable
     OverlayForm? _form;
     bool _manual;        // user forced it on with the hotkey / menu
     bool _auto;          // currently shown because a game is detected
+    readonly List<OverlayItem> _items = new();
+    readonly HashSet<object> _hideFromCapture = new();
 
     public bool Visible => _form is { Visible: true };
+    public Rectangle Bounds => Visible ? _form!.Bounds : Rectangle.Empty;
     public event Action? Changed;
+
+    /// <summary>Items plugins added, shown after the app's own rows.</summary>
+    public IReadOnlyList<OverlayItem> Items => _items;
+    public void AddItem(OverlayItem item) { _items.Add(item); ItemsChanged(); }
+    public void RemoveItem(OverlayItem item) { if (_items.Remove(item)) ItemsChanged(); }
+    /// <summary>An item changed: the overlay measures and paints again.</summary>
+    public void ItemsChanged() => _form?.ItemsChanged();
+
+    /// <summary>Kept out of screenshots and recordings while any owner (a plugin) asks for it.</summary>
+    public void HideFromCapture(object owner, bool hide)
+    {
+        if (hide ? !_hideFromCapture.Add(owner) : !_hideFromCapture.Remove(owner)) return;
+        _form?.SetCaptureHidden(HiddenFromCapture);
+    }
+    public bool HiddenFromCapture => _hideFromCapture.Count > 0;
 
     public OverlayManager(Controller c, SensorMonitor mon)
     {
@@ -85,10 +103,11 @@ public sealed class OverlayManager : IDisposable
         bool show = _manual || _auto;
         if (show && !Visible)
         {
-            _form ??= new OverlayForm(_c, _mon, _frames) { Style = Style };
+            _form ??= new OverlayForm(_c, _mon, _frames, this) { Style = Style };
             _frames.Start();
             _form.Reposition();
             _form.ShowNoActivate();
+            _form.SetCaptureHidden(HiddenFromCapture);
             _mon.Want(this, Need.Mode | Need.Fans | Need.Cpu | Need.Gpu | Need.Power);
             RegisterMoveKeys();
         }
@@ -137,7 +156,21 @@ public sealed class OverlayManager : IDisposable
     }
 }
 
-public enum OvIcon { None, Fps, Frame, Cpu, Gpu, Power, Vram, Ram, Fan, Mode }
+public enum OvIcon { None, Fps, Frame, Cpu, Gpu, Power, Vram, Ram, Fan, Mode, Plugin }
+
+/// <summary>A plugin's item in the overlay. Changed on the UI thread only; <see cref="OverlayManager.ItemsChanged"/> redraws.</summary>
+public sealed class OverlayItem
+{
+    public string Label = "", Value = "", Extra = "";
+    public string? Compact;
+    public Color? Color;
+    public bool Visible = true, Essential = true;
+    public List<float>? History;   // null: no graph
+    public float Min, Max = 100;
+    public Action<Graphics, RectangleF, Color>? DrawIcon;
+    /// <summary>DrawIcon threw; the plugin is stopped (which removes the item).</summary>
+    public Action<Exception>? Failed;
+}
 
 /// <summary>
 /// The overlay window. Styles: 0 full (rows with graphs), 1 minimal column, 2 horizontal bar with graphs,
@@ -159,6 +192,7 @@ public sealed class OverlayForm : Form
         public bool Bars;          // frame-time style graph
         public bool Big;
         public bool Essential = true;   // shown in the minimal styles
+        public OverlayItem? Item;       // a plugin's item
         // the widest text this row can show (all digits at their widest), so items keep one width from the start
         public string Wide = "", WideExtra = "";
     }
@@ -166,6 +200,7 @@ public sealed class OverlayForm : Form
     readonly Controller _c;
     readonly SensorMonitor _mon;
     readonly FrameMonitor _frames;
+    readonly OverlayManager? _owner;   // its plugin items; none for the screenshot previews
     readonly System.Windows.Forms.Timer _fast = new() { Interval = 500 };
 
     readonly List<float> _fps = new(), _cpu = new(), _gpu = new(), _cpuPwr = new(), _gpuPwr = new(), _allPwr = new(), _vram = new(), _ram = new();
@@ -209,9 +244,9 @@ public sealed class OverlayForm : Form
         set { _style = value; _widths.Clear(); Rebuild(); Reposition(); }
     }
 
-    public OverlayForm(Controller c, SensorMonitor mon, FrameMonitor frames)
+    public OverlayForm(Controller c, SensorMonitor mon, FrameMonitor frames, OverlayManager? owner = null)
     {
-        _c = c; _mon = mon; _frames = frames;
+        _c = c; _mon = mon; _frames = frames; _owner = owner;
         FormBorderStyle = FormBorderStyle.None;
         ShowInTaskbar = false;
         TopMost = true;
@@ -246,6 +281,15 @@ public sealed class OverlayForm : Form
         ShowWindow(Handle, 4); // SW_SHOWNOACTIVATE
         Visible = true;
         KeepOnTop();
+    }
+
+    /// <summary>Plugin items changed.</summary>
+    public void ItemsChanged() { if (!IsDisposed) Rebuild(); }
+
+    /// <summary>Kept out of screenshots and screen recordings, still shown on screen (Windows 10 2004 and later).</summary>
+    public void SetCaptureHidden(bool hide)
+    {
+        if (IsHandleCreated) SetWindowDisplayAffinity(Handle, hide ? 0x11u : 0u);   // WDA_EXCLUDEFROMCAPTURE / WDA_NONE
     }
 
     public void KeepOnTop() => SetWindowPos(Handle, new IntPtr(-1), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010); // NOSIZE|NOMOVE|NOACTIVATE
@@ -426,6 +470,17 @@ public sealed class OverlayForm : Form
                 Color = _c.S.FanCurve ? Extra : snap.Profile == Hardware.Awcc.ProfileGMode ? Warm : Accent,
             });
         }
+        foreach (var it in _owner?.Items ?? Array.Empty<OverlayItem>())
+        {
+            if (!it.Visible) continue;
+            string compact = it.Compact ?? it.Value;
+            _rows.Add(new Row
+            {
+                Label = it.Label, Icon = OvIcon.Plugin, Item = it, Value = it.Value, Compact = compact, Extra = it.Extra,
+                StripText = it.DrawIcon == null ? $"{it.Label} {compact}" : null,
+                Color = it.Color ?? Fg, History = it.History, Min = it.Min, Max = it.Max, Essential = it.Essential,
+            });
+        }
 
         var size = _style switch
         {
@@ -484,7 +539,10 @@ public sealed class OverlayForm : Form
 
     Size MeasureBar() => new(S(10) + _rows.Sum(r => SegmentWidth(r) + S(12)) + S(2), S(86));
 
-    int StripItemWidth(Row r) => Stable("strip." + r.Label, S(18) + S(4) + Widest(ValueFont, r.StripText ?? r.Compact, r.StripText != null ? r.Wide : ShortWide(r)));
+    /// <summary>Plugin items without an icon show their label in the strip instead.</summary>
+    static bool HasIcon(Row r) => r.Icon != OvIcon.Plugin || r.Item?.DrawIcon != null;
+
+    int StripItemWidth(Row r) => Stable("strip." + r.Label, (HasIcon(r) ? S(18) + S(4) : 0) + Widest(ValueFont, r.StripText ?? r.Compact, r.StripText != null ? r.Wide : ShortWide(r)));
 
     /// <summary>The reserve for the compact value: "88.8 GB" without the "/ 32 GB" part, one fan, no source name.</summary>
     static string ShortWide(Row r) => r.Icon switch
@@ -579,12 +637,27 @@ public sealed class OverlayForm : Form
         int x = S(10), cy = Height / 2;
         foreach (var r in ShownRows)
         {
-            OverlayIcons.Draw(g, r.Icon, new RectangleF(x, cy - S(9), S(18), S(18)), r.Icon == OvIcon.Fan ? Muted : r.Color);
+            var icon = new RectangleF(x, cy - S(9), S(18), S(18));
+            if (r.Item is { DrawIcon: { } draw } item) PluginIcon(g, item, draw, icon, r.Color);
+            else OverlayIcons.Draw(g, r.Icon, icon, r.Icon == OvIcon.Fan ? Muted : r.Color);
             var text = r.StripText ?? r.Compact;
             var tsz = TextRenderer.MeasureText(text, ValueFont);
-            TextRenderer.DrawText(g, text, ValueFont, new Point(x + S(22), cy - tsz.Height / 2), r.Color);
+            TextRenderer.DrawText(g, text, ValueFont, new Point(x + (HasIcon(r) ? S(22) : 0), cy - tsz.Height / 2), r.Color);
             x += StripItemWidth(r) + S(12);
         }
+    }
+
+    /// <summary>A plugin draws its own icon; if that throws, the plugin is stopped once painting is over.</summary>
+    void PluginIcon(Graphics g, OverlayItem item, Action<Graphics, RectangleF, Color> draw, RectangleF rect, Color color)
+    {
+        var state = g.Save();
+        try { draw(g, rect, color); }
+        catch (Exception ex)
+        {
+            item.DrawIcon = null;   // no second try before the plugin is gone
+            BeginInvoke(() => item.Failed?.Invoke(ex));
+        }
+        finally { g.Restore(state); }
     }
 
     static void DrawGraph(Graphics g, Row r, RectangleF rect)
@@ -632,6 +705,7 @@ public sealed class OverlayForm : Form
     }
 
     [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr h, int cmd);
+    [DllImport("user32.dll")] static extern bool SetWindowDisplayAffinity(IntPtr h, uint affinity);
     [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
 }
 

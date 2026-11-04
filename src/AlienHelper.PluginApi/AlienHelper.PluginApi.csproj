@@ -10,7 +10,7 @@
     <RootNamespace>AlienHelper.Plugins</RootNamespace>
     <Product>Alien Helper Plugin API</Product>
     <!-- the assembly version changes only with the API's major version, so plugins keep binding to it -->
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>

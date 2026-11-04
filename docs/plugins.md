@@ -99,9 +99,37 @@ What `IPluginHost` gives (see `src\AlienHelper.PluginApi\PluginApi.cs`):
 | `Notify` | a notification from the tray icon |
 | `GameInFront`, `ForegroundApp`, `GameChanged` | the game detection the overlay uses |
 | `Theme`, `ThemeChanged` | the app's colors and font, for the plugin's windows |
+| `Overlay` | the in-game overlay: the plugin's own items, mode, style, hiding it from recordings (below) |
 
 The tray menu gets a submenu with the plugin's name: its `MenuItems()` and **Settings…**, which opens
 `CreateSettingsView()` in a window.
+
+## The overlay
+
+`host.Overlay` (API 1.1) lets a plugin put its own items into the in-game overlay,
+after the app's rows: a row in the full style, a segment in the bar, a value in the minimal styles.
+
+```csharp
+var rec = host.Overlay.AddItem("REC");
+rec.Color = Color.FromArgb(255, 80, 80);
+rec.Extra = "1080p 60";             // small text: right of the value (full), under it (bar)
+rec.Compact = "1:24";               // the minimal styles (Mini, Icons); Value otherwise
+rec.DrawIcon = (g, r, c) => { using var b = new SolidBrush(c); g.FillEllipse(b, r); };   // icon strip; else the label
+rec.Value = "01:24";                // any thread: the overlay redraws soon after
+
+var mic = host.Overlay.AddItem("MIC");
+mic.Graph = true; mic.GraphMin = 0; mic.GraphMax = 1;
+mic.Essential = false;              // not in the minimal styles
+mic.AddSample(level);               // the last 240 points are drawn
+
+host.Overlay.HiddenFromCapture = true;   // recordings and screenshots leave the overlay out (Windows 10 2004+)
+rec.Dispose();                           // removes the item; the host removes the rest when the plugin stops
+```
+
+`Visible`, `Bounds` and `Changed` say whether and where it is on screen. `Mode` (Off, Always, InGames), `Style`
+(Full, Mini, Bar, Icons) and `Toggle()` change what the user chose, and it is saved: use them for the user's own
+actions (a menu item or hotkey of the plugin), not on your own. On an app with API 1.0 (no `Overlay` yet) a plugin that uses it is stopped when it
+gets there, and Settings shows the error.
 
 ## Installing
 
@@ -130,4 +158,8 @@ a plugin, delete its folder (and restart the app if it was running).
 - Если вызов плагина бросил исключение, плагин останавливается до перезапуска, и в настройках видна ошибка. Исключение
   в собственном потоке плагина закрывает программу целиком, поэтому их нужно ловить.
 
-Формат `plugin.json`, пример плагина и список возможностей `IPluginHost` — в английской части выше.
+Плагин может добавлять в оверлей свои строки (например «REC 01:24» с красной точкой), рисовать для них график и значок,
+скрывать оверлей из записи экрана и скриншотов, а по действию пользователя менять режим и вид оверлея
+(`host.Overlay`, API 1.1).
+
+Формат `plugin.json`, пример плагина, работа с оверлеем и список возможностей `IPluginHost` — в английской части выше.

@@ -490,22 +490,13 @@ public sealed class SettingsForm : Form
         var path = Note(PluginManager.Dir, ref cy, Blend(Muted, Fg, 0.5f));
         path.Top -= S(4);
         cy = path.Bottom + S(4);
-        int x = S(Pad), bw = (Inner - S(6)) / 2;
-        foreach (var (text, act) in new (string, Action)[]
+        var folder = new PillButton(L.T("plugins.folder")) { Bounds = new Rectangle(S(Pad), cy, (Inner - S(6)) / 2, S(28)) };
+        folder.Click += (_, _) =>
         {
-            (L.T("plugins.folder"), () =>
-            {
-                try { Directory.CreateDirectory(PluginManager.Dir); } catch { }   // under Program Files: needs admin rights
-                if (Directory.Exists(PluginManager.Dir)) System.Diagnostics.Process.Start("explorer.exe", PluginManager.Dir);
-            }),
-            (L.T("plugins.docs"), () => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Log.RepoUrl + "/blob/test/docs/plugins.md") { UseShellExecute = true })),
-        })
-        {
-            var b = new PillButton(text) { Bounds = new Rectangle(x, cy, bw, S(28)) };
-            b.Click += (_, _) => act();
-            card.Controls.Add(b);
-            x += b.Width + S(6);
-        }
+            try { Directory.CreateDirectory(PluginManager.Dir); } catch { }   // under Program Files: needs admin rights
+            if (Directory.Exists(PluginManager.Dir)) System.Diagnostics.Process.Start("explorer.exe", PluginManager.Dir);
+        };
+        card.Controls.Add(folder);
         cy += S(28) + S(6);
         return Finish(card, cy);
     }
