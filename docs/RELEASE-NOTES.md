@@ -2,6 +2,13 @@
 
 **English** | [Русский](#что-нового)
 
+## 0.1.23
+
+- **Alien Helper VideoCap.** VideoCap is the first paid plugin: screen and sound recording in games and on the
+  desktop. In the Store version it comes inside the app's package and turns on once you buy its add-on in
+  **Settings → Plugins → Buy**. It needs nothing else to download.
+- Plugins now use the app's own copy of the Windows runtime libraries, so the package is smaller.
+
 ## 0.1.22
 
 The package now declares borderless screen capture (`graphicsCaptureWithoutBorder`) and the microphone. Plugins
@@ -10,15 +17,15 @@ allows it) and to record the microphone. The app itself does not record anything
 
 ## 0.1.21
 
-For the Microsoft Store, 0.1.22 follows 0.1.17, so the Store text below covers 0.1.21 and 0.1.22. Everything since
+For the Microsoft Store, 0.1.23 follows 0.1.17, so the Store text below covers 0.1.21 to 0.1.23. Everything since
 0.1.17:
 
 - **Plugins.** Plugins are separate products that run inside Alien Helper, for example screen and sound recording.
   Each gets its own tray submenu, a settings window, hotkeys, notifications and items in the overlay. A plugin is off
   until you turn it on in **Settings → Plugins**. If a plugin fails, it is stopped and Alien Helper keeps running.
 - **Add-ons in the Microsoft Store** (Store version). **Settings → Plugins → Add-ons in the Microsoft Store** lists the
-  plugins sold as add-ons, with their prices. Buying one installs it and turns it on. The Store version loads plugins
-  from these add-ons only.
+  plugins sold as add-ons, with their prices. Buying one turns it on. The Store version loads plugins from these
+  add-ons only.
 - **The overlay and plugins.** A plugin can add its own rows to the overlay, such as "REC 01:24", with a graph and an
   icon. It can also keep the overlay out of screenshots and recordings.
 - **Game detection.** The overlay's "In games" mode now shows only for games, not for every full-screen app. It
@@ -30,8 +37,9 @@ For the Microsoft Store, 0.1.22 follows 0.1.17, so the Store text below covers 0
 ### Microsoft Store: "What's new in this version" (en-us, 1500 characters at most)
 
 ```
-• Plugins: separate products that run inside Alien Helper, such as screen and sound recording. Each gets its own tray menu, settings, hotkeys and overlay items. Plugins stay off until you turn them on in Settings → Plugins.
-• Add-ons: Settings → Plugins → Add-ons in the Microsoft Store lists plugins sold in the Store. Buying one installs it and turns it on.
+• Plugins: separate products that run inside Alien Helper. Each gets its own tray menu, settings, hotkeys and overlay items. Plugins stay off until you turn them on in Settings → Plugins.
+• Alien Helper VideoCap, the first plugin: screen and sound recording in games and on the desktop. Buy the add-on in Settings → Plugins and it turns on at once.
+• Add-ons: Settings → Plugins → Add-ons in the Microsoft Store lists the plugins sold in the Store, with their prices.
 • Overlay: plugins can add their own rows (for example REC 01:24) and keep the overlay out of recordings.
 • Game detection: the overlay's "In games" mode now shows only for games, not every full-screen app. It uses Windows' game list, game library folders and GPU load. The tray menu can mark the current app as a game or not.
 • The limited-mode message is now a yellow warning that folds into a "!" in the header.
@@ -40,7 +48,7 @@ For the Microsoft Store, 0.1.22 follows 0.1.17, so the Store text below covers 0
 ### Microsoft Store: "Notes for certification"
 
 ```
-This update adds plugin support. Plugins are sold only as durable add-ons of this app in the Microsoft Store. Each is an optional package (MSIX) of this app, from the same publisher. Settings → Plugins → "Add-ons in the Microsoft Store" lists them through Windows.Services.Store. Buying one calls RequestPurchaseAsync and then RequestDownloadAndInstallStorePackagesAsync. The app loads plugin code only from its own optional packages installed by the Store. It never downloads code itself and never loads plugins from any other location in the Store version. No add-ons are published yet, so the list is empty. The restricted capabilities (runFullTrust, allowElevation) are unchanged from the previous submission. New general-use capabilities: graphicsCaptureWithoutBorder and microphone (device capability). They are for a screen and sound recording plugin sold as an add-on, which runs inside the app; Windows still asks the user before borderless capture and microphone access. Alien Helper itself records nothing.
+This update adds plugin support and the first paid plugin, Alien Helper VideoCap (screen and sound recording). VideoCap ships inside this app's package (folder Plugins\videocap) and is unlocked by the durable add-on AlienHelperVideoCap (Store ID 9NPBGN51VF76), a license-only add-on without a package. The app checks StoreContext.GetAppLicenseAsync().AddOnLicenses and loads the plugin only while that license is active. Settings → Plugins shows Buy, which calls RequestPurchaseAsync. The app never downloads code and in the Store version loads plugin code only from its own package. To test VideoCap: buy the add-on in Settings → Plugins, then use the tray menu → Alien Helper VideoCap → Start recording. The restricted capabilities (runFullTrust, allowElevation) are unchanged from the previous submission. New general-use capabilities: graphicsCaptureWithoutBorder and microphone (device capability), both for VideoCap. Windows still asks the user before borderless capture and microphone access.
 ```
 
 ---
@@ -48,6 +56,13 @@ This update adds plugin support. Plugins are sold only as durable add-ons of thi
 # Что нового
 
 [English](#release-notes) | **Русский**
+
+## 0.1.23
+
+- **Alien Helper VideoCap.** VideoCap — первый платный плагин: запись экрана и звука в играх и на рабочем столе. В
+  Store-версии он уже есть в пакете программы и включается после покупки дополнения в «Настройки → Плагины →
+  Купить». Скачивать больше ничего не нужно.
+- Плагины теперь используют библиотеки среды Windows из самой программы, поэтому пакет стал меньше.
 
 ## 0.1.22
 
@@ -57,15 +72,15 @@ This update adds plugin support. Plugins are sold only as durable add-ons of thi
 
 ## 0.1.21
 
-В Microsoft Store после 0.1.17 выходит 0.1.22, поэтому текст для Store ниже охватывает 0.1.21 и 0.1.22. Всё, что
-изменилось после 0.1.17:
+В Microsoft Store после 0.1.17 выходит 0.1.23, поэтому текст для Store ниже охватывает версии с 0.1.21 по 0.1.23. Всё,
+что изменилось после 0.1.17:
 
 - **Плагины.** Плагины — отдельные продукты, которые работают внутри Alien Helper, например запись экрана и звука.
   У плагина бывает своё меню в трее, окно настроек, горячие клавиши, уведомления и строки в оверлее. Плагин выключен,
   пока его не включить в «Настройки → Плагины». Если плагин сломается, он останавливается, а программа работает дальше.
 - **Дополнения в Microsoft Store** (Store-версия). В «Настройки → Плагины → Дополнения в Microsoft Store» видны
-  плагины, которые продаются как дополнения, с ценами. Купленный плагин сам устанавливается и включается.
-  Store-версия загружает плагины только из таких дополнений.
+  плагины, которые продаются как дополнения, с ценами. Купленный плагин сразу включается. Store-версия загружает
+  плагины только из таких дополнений.
 - **Оверлей и плагины.** Плагин может добавить в оверлей свои строки, например «REC 01:24», с графиком и значком.
   Ещё он может скрыть оверлей из скриншотов и записи экрана.
 - **Определение игр.** Режим оверлея «В играх» теперь срабатывает только на игры, а не на любую программу на весь
@@ -77,8 +92,9 @@ This update adds plugin support. Plugins are sold only as durable add-ons of thi
 ### Microsoft Store: «Новые возможности этой версии» (ru-ru, не больше 1500 символов)
 
 ```
-• Плагины: отдельные продукты, которые работают внутри Alien Helper, например запись экрана и звука. У плагина своё меню в трее, настройки, горячие клавиши и строки в оверлее. Плагины выключены, пока вы не включите их в «Настройки → Плагины».
-• Дополнения: в «Настройки → Плагины → Дополнения в Microsoft Store» видны плагины, которые продаются в Store. Купленный плагин сам устанавливается и включается.
+• Плагины: отдельные продукты, которые работают внутри Alien Helper. У плагина своё меню в трее, настройки, горячие клавиши и строки в оверлее. Плагины выключены, пока вы не включите их в «Настройки → Плагины».
+• Alien Helper VideoCap, первый плагин: запись экрана и звука в играх и на рабочем столе. Купите дополнение в «Настройки → Плагины», и он сразу включится.
+• Дополнения: в «Настройки → Плагины → Дополнения в Microsoft Store» видны плагины, которые продаются в Store, с ценами.
 • Оверлей: плагины могут добавлять свои строки (например REC 01:24) и скрывать оверлей из записи экрана.
 • Определение игр: режим оверлея «В играх» срабатывает только на игры, а не на любую программу на весь экран. Учитываются список игр Windows, папки игровых библиотек и нагрузка на видеокарту. В меню трея программу можно отметить как игру или как «не игра».
 • Сообщение об ограниченном режиме стало жёлтым предупреждением, его можно свернуть до «!» в заголовке.
