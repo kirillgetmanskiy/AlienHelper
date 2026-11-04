@@ -2,16 +2,13 @@
 
 **English** | [Русский](#плагины)
 
-> Test build only for now (Alien Helper Test, branches `test` and `test-no-uac`). The API may still change before it
-> reaches the release build.
-
 A plugin is a separate product that runs inside Alien Helper: screen and sound recording, for example. It is a .NET 8
 class library that builds against `AlienHelper.PluginApi.dll` and is installed by its own installer.
 
 ## How the app finds and loads plugins
 
-- Folder: `%ProgramFiles%\AlienHelperTest\Plugins\<plugin>\` (the release build will use
-  `%ProgramFiles%\AlienHelper\Plugins\`). Each plugin has its own folder with a `plugin.json` and its assemblies.
+- Folder: `%ProgramFiles%\AlienHelper\Plugins\<plugin>\` (the test build, Alien Helper Test:
+  `%ProgramFiles%\AlienHelperTest\Plugins\`). Each plugin has its own folder with a `plugin.json` and its assemblies.
 - **Only from a folder that administrators alone can change.** The app runs with admin rights, so a plugin's code runs
   with them too. A plugin loads only when its folder, every file in it and the folders above (`Plugins`, the app
   folder) can be changed by Administrators, SYSTEM and TrustedInstaller alone, and are owned by one of them. That is
@@ -92,7 +89,7 @@ What `IPluginHost` gives (see `src\AlienHelper.PluginApi\PluginApi.cs`):
 |---|---|
 | `AppVersion`, `IsTestBuild`, `IsElevated` | about the app |
 | `Language`, `LanguageChanged` | the UI language (`ru`, `en`, `fr`, `es`, `ja`, `zh`) |
-| `DataDirectory` | the plugin's own writable folder: `%APPDATA%\AlienHelperTest\plugins\<id>` |
+| `DataDirectory` | the plugin's own writable folder: `%APPDATA%\AlienHelper\plugins\<id>` (test build: `AlienHelperTest`) |
 | `Log` | a line in the app's log, marked with the plugin's id |
 | `RunOnUi` | runs an action on the UI thread; every call into the plugin already comes there |
 | `RegisterHotkey` | a global hotkey; removed when the plugin stops |
@@ -134,7 +131,7 @@ gets there, and Settings shows the error.
 ## Installing
 
 The plugin's installer runs as administrator and copies the files to
-`%ProgramFiles%\AlienHelperTest\Plugins\<id>\`. The user then turns the plugin on in **Settings → Plugins**. To remove
+`%ProgramFiles%\AlienHelper\Plugins\<id>\` (or `AlienHelperTest` for the test build). The user then turns the plugin on in **Settings → Plugins**. To remove
 a plugin, delete its folder (and restart the app if it was running).
 
 ---
@@ -143,12 +140,10 @@ a plugin, delete its folder (and restart the app if it was running).
 
 [English](#plugins) | **Русский**
 
-> Пока только в тестовой версии (Alien Helper Test, ветки `test` и `test-no-uac`). До выпуска API может измениться.
-
 Плагин — отдельный продукт, который работает внутри Alien Helper, например запись экрана и звука. Это библиотека
 .NET 8, собранная с `AlienHelper.PluginApi.dll`, со своим установщиком.
 
-- Папка: `%ProgramFiles%\AlienHelperTest\Plugins\<плагин>\`, в каждой — `plugin.json` и сборки плагина.
+- Папка: `%ProgramFiles%\AlienHelper\Plugins\<плагин>\` (у тестовой версии — `AlienHelperTest`), в каждой — `plugin.json` и сборки плагина.
 - **Только из папки, которую может менять лишь администратор.** Программа работает с правами администратора, и код
   плагина получает те же права. Поэтому плагин загружается, только если его папку, все файлы в ней и папки выше
   могут менять только Администраторы, SYSTEM и TrustedInstaller и владелец у них тоже один из них. Так и будет, если
