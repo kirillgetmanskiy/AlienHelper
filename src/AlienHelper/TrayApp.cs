@@ -167,6 +167,15 @@ public sealed class TrayApp : ApplicationContext
             int si = i;
             ov.DropDownItems.Add(new ToolStripMenuItem("   " + L.T($"ov.s{i}"), null, (_, _) => _overlay.Style = si) { Checked = _overlay.Style == i });
         }
+        // the detector got the app in front wrong: settle it by hand (a second click hands it back to the detector)
+        if (GameDetector.LastApp is { } app)
+        {
+            bool? said = GameDetector.UserSays(app);
+            ov.DropDownItems.Add(new ToolStripSeparator());
+            ov.DropDownItems.Add(new ToolStripMenuItem(L.T("ov.app", app)) { Enabled = false });
+            ov.DropDownItems.Add(new ToolStripMenuItem("   " + L.T("ov.app.game"), null, (_, _) => GameDetector.Mark(app, said == true ? null : true)) { Checked = said == true });
+            ov.DropDownItems.Add(new ToolStripMenuItem("   " + L.T("ov.app.notgame"), null, (_, _) => GameDetector.Mark(app, said == false ? null : false)) { Checked = said == false });
+        }
         foreach (ToolStripItem i in ov.DropDownItems) i.ForeColor = Theme.Fg;
         m.Items.Add(ov);
         var lang = new ToolStripMenuItem(L.T("opt.lang"));

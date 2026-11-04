@@ -41,7 +41,9 @@ public sealed class Settings
     public int OverlayStyleHotkey { get; set; } = (int)(System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift | System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.O);
     public string? Language { get; set; }           // null = follow Windows
     public string? UntestedModelWarned { get; set; } // model we already warned about (warn once)
-    public bool OverlayAuto { get; set; } = true;   // show the overlay while a fullscreen game is in front
+    public bool OverlayAuto { get; set; } = true;   // show the overlay while a game is in front
+    public List<string> GameApps { get; set; } = new();      // process names the user counts as games (tray → Overlay)
+    public List<string> NotGameApps { get; set; } = new();   // and as not games, whatever the detector thinks
     public int OverlayCorner { get; set; }          // 0 top-left, 1 top-right, 2 bottom-left, 3 bottom-right
     public int OverlayStyle { get; set; }           // 0 full, 1 minimal, 2 horizontal, 3 icon strip
     public int? OverlayX { get; set; }              // hand-placed position (Ctrl+Shift+Alt+arrows), null = corner
