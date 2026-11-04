@@ -150,8 +150,9 @@ add-ons only, never from the plugins folder: the Store does not allow adding cod
 **For now: inside the app's package.** Optional packages need Microsoft's permission. Until it comes, a paid plugin
 ships inside the app's Store package as `Plugins\<id>` (`installer\build-msix.ps1 -Plugins <folder>`; by default
 VideoCap's `..\AlienHelper-VideoCap\publish\store-bundle`). Its add-on is a plain *durable without a package*: a
-license only. The Store build loads such a plugin only while `StoreContext.GetAppLicenseAsync()` shows an active
-license for the `storeId` in its plugin.json. Otherwise **Settings → Plugins** shows it as not bought, with **Buy**.
+license only. The Store build loads such a plugin only while the user owns the `storeId` in its plugin.json. Such an
+add-on never shows in `GetAppLicenseAsync().AddOnLicenses`, only in `StoreContext.GetUserCollectionAsync()`, so the
+app asks both. Otherwise **Settings → Plugins** shows it as not bought, with **Buy**.
 After the purchase it turns on at once, with nothing to download, and a refund stops it. Each plugin update then
 ships with an update of the app.
 
