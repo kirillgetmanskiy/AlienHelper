@@ -17,6 +17,14 @@
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 
+  <!-- the test channel (build.ps1 on the test branches): its own exe and identity, installed next to prod (AppId.cs) -->
+  <PropertyGroup Condition="'$(Channel)' == 'test'">
+    <AssemblyName>AlienHelperTest</AssemblyName>
+    <Product>Alien Helper Test</Product>
+    <AssemblyTitle>Alien Helper Test</AssemblyTitle>
+    <DefineConstants>$(DefineConstants);TEST_CHANNEL</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <EmbeddedResource Include="Assets\app.ico" LogicalName="AlienHelper.app.ico" />
     <EmbeddedResource Include="Assets\IntelMSR.bin" LogicalName="AlienHelper.IntelMSR.bin" />

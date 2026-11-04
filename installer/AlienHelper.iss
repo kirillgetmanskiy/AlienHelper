@@ -4,13 +4,25 @@
 #ifndef AppVersion
   #define AppVersion "0.1.0"
 #endif
-#define AppName "AlienHelper"
-#define AppTitle "Alien Helper"
-#define AppExe "AlienHelper.exe"
+#ifndef Channel
+  #define Channel "prod"
+#endif
+; the test channel (build-installer.ps1 on the test branches) installs next to prod: another AppId, folder, exe and
+; settings folder; AppGuid and AppName must match AppId.cs
+#if Channel == "test"
+  #define AppName "AlienHelperTest"
+  #define AppTitle "Alien Helper Test"
+  #define AppGuid "B2D84E6A-5C1F-4A93-8E7B-3F6D0C9A2E15"
+#else
+  #define AppName "AlienHelper"
+  #define AppTitle "Alien Helper"
+  #define AppGuid "6F3C2B1E-8A47-4D5C-9E21-A1E7F0B4C3D9"
+#endif
+#define AppExe AppName + ".exe"
 
 [Setup]
 ; keep AppId unchanged between versions: upgrades and the uninstaller find the install by it
-AppId={{6F3C2B1E-8A47-4D5C-9E21-A1E7F0B4C3D9}
+AppId={{{#AppGuid}}
 AppName={#AppTitle}
 AppVersion={#AppVersion}
 AppVerName={#AppTitle} {#AppVersion}
@@ -58,11 +70,11 @@ en.Disclaimer=The program controls power modes, fans and lighting directly throu
 fr.Disclaimer=The program controls power modes, fans and lighting directly through undocumented firmware interfaces. It is provided "as is", without warranty; you use it at your own risk.%n%nAlienHelper is not affiliated with Dell Inc. Alienware is a trademark of Dell Inc.
 es.Disclaimer=The program controls power modes, fans and lighting directly through undocumented firmware interfaces. It is provided "as is", without warranty; you use it at your own risk.%n%nAlienHelper is not affiliated with Dell Inc. Alienware is a trademark of Dell Inc.
 ja.Disclaimer=The program controls power modes, fans and lighting directly through undocumented firmware interfaces. It is provided "as is", without warranty; you use it at your own risk.%n%nAlienHelper is not affiliated with Dell Inc. Alienware is a trademark of Dell Inc.
-ru.DeleteSettings=Удалить также настройки AlienHelper (%APPDATA%\AlienHelper)?
-en.DeleteSettings=Also delete AlienHelper settings (%APPDATA%\AlienHelper)?
-fr.DeleteSettings=Also delete AlienHelper settings (%APPDATA%\AlienHelper)?
-es.DeleteSettings=Also delete AlienHelper settings (%APPDATA%\AlienHelper)?
-ja.DeleteSettings=Also delete AlienHelper settings (%APPDATA%\AlienHelper)?
+ru.DeleteSettings=Удалить также настройки {#AppTitle} (%APPDATA%\{#AppName})?
+en.DeleteSettings=Also delete {#AppTitle} settings (%APPDATA%\{#AppName})?
+fr.DeleteSettings=Also delete {#AppTitle} settings (%APPDATA%\{#AppName})?
+es.DeleteSettings=Also delete {#AppTitle} settings (%APPDATA%\{#AppName})?
+ja.DeleteSettings=Also delete {#AppTitle} settings (%APPDATA%\{#AppName})?
 
 en.GetPawnIO=Open the PawnIO page (needed for per-core temperatures and total power)
 ru.GetPawnIO=Открыть страницу PawnIO (нужен для температур ядер и общего потребления)
@@ -92,9 +104,9 @@ Filename: "https://pawnio.eu/"; Description: "{cm:GetPawnIO}"; Flags: shellexec 
 
 [UninstallRun]
 ; autostart entry (Run key) of this build, and scheduled tasks left by builds that started without UAC
-Filename: "{sys}\reg.exe"; Parameters: "delete HKCU\Software\Microsoft\Windows\CurrentVersion\Run /v AlienHelper /f"; Flags: runhidden; RunOnceId: "DelRunKey"
-Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /F /TN AlienHelper"; Flags: runhidden; RunOnceId: "DelTaskLogon"
-Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /F /TN AlienHelper-NoUAC"; Flags: runhidden; RunOnceId: "DelTaskNoUac"
+Filename: "{sys}\reg.exe"; Parameters: "delete HKCU\Software\Microsoft\Windows\CurrentVersion\Run /v {#AppName} /f"; Flags: runhidden; RunOnceId: "DelRunKey"
+Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /F /TN {#AppName}"; Flags: runhidden; RunOnceId: "DelTaskLogon"
+Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /F /TN {#AppName}-NoUAC"; Flags: runhidden; RunOnceId: "DelTaskNoUac"
 
 [Code]
 var
@@ -148,7 +160,7 @@ begin
   if CurUninstallStep = usUninstall then
     CloseApp(ExpandConstant('{app}\{#AppExe}'));
   if (CurUninstallStep = usPostUninstall) and not UninstallSilent() and
-     DirExists(ExpandConstant('{userappdata}\AlienHelper')) and
+     DirExists(ExpandConstant('{userappdata}\{#AppName}')) and
      (MsgBox(CustomMessage('DeleteSettings'), mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES) then
-    DelTree(ExpandConstant('{userappdata}\AlienHelper'), True, True, True);
+    DelTree(ExpandConstant('{userappdata}\{#AppName}'), True, True, True);
 end;

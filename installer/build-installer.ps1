@@ -5,14 +5,16 @@
 # -SignCmd signs the exe and the installer (required for the Microsoft Store); $f stands for the file, e.g.
 #   -SignCmd 'signtool.exe sign /fd sha256 /tr http://timestamp.digicert.com /td sha256 /a $f'
 # Silent install (the Store asks for it): AlienHelper-Setup-<version>.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
-param([string]$SignCmd)
+# -Channel prod|test: by default test on the test branches (see channel.ps1); the test build installs next to prod.
+param([string]$SignCmd, [string]$Channel)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot
+. "$root\channel.ps1"
 
-& "$root\build.ps1" -Out 'installer\app'
+& "$root\build.ps1" -Out 'installer\app' -Channel $Channel
 
 if ($SignCmd) {
-    $cmd = $SignCmd.Replace('$f', "`"$PSScriptRoot\app\AlienHelper.exe`"")
+    $cmd = $SignCmd.Replace('$f', "`"$PSScriptRoot\app\$AppKey.exe`"")
     & cmd.exe /c $cmd
     if ($LASTEXITCODE -ne 0) { throw "signing AlienHelper.exe failed ($LASTEXITCODE)" }
 }
@@ -26,7 +28,7 @@ $iscc = @(
 if (-not $iscc) { $iscc = (Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source }
 if (-not $iscc) { throw 'Inno Setup 6 not found. Install it: winget install JRSoftware.InnoSetup' }
 
-$isccArgs = @("/DAppVersion=$version")
+$isccArgs = @("/DAppVersion=$version", "/DChannel=$Channel")
 if ($SignCmd) { $isccArgs += '/DSign', "/Ssigntool=$SignCmd" }
 & $iscc @isccArgs "$PSScriptRoot\AlienHelper.iss"
 if ($LASTEXITCODE -ne 0) { throw "ISCC failed ($LASTEXITCODE)" }

@@ -233,8 +233,30 @@ public static class Theme
     public static Icon AppIcon(Size size)
     {
         using var s = typeof(Theme).Assembly.GetManifestResourceStream("AlienHelper.app.ico")!;
-        return new Icon(s, size);
+        var icon = new Icon(s, size);
+        return AppId.Test ? TestBadge(icon) : icon;
     }
+
+    /// <summary>The test build's icon: the app icon with an orange dot in the corner, in the tray and on the windows.</summary>
+    static Icon TestBadge(Icon icon)
+    {
+        using (icon)
+        using (var bmp = icon.ToBitmap())
+        {
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                float d = bmp.Width * 0.5f, x = bmp.Width - d, y = bmp.Height - d;
+                using (var edge = new SolidBrush(Color.FromArgb(20, 20, 20))) g.FillEllipse(edge, x - 1, y - 1, d + 1, d + 1);
+                using (var dot = new SolidBrush(Color.FromArgb(255, 140, 0))) g.FillEllipse(dot, x, y, d - 1, d - 1);
+            }
+            IntPtr h = bmp.GetHicon();
+            try { return (Icon)Icon.FromHandle(h).Clone(); }
+            finally { DestroyIcon(h); }
+        }
+    }
+
+    [DllImport("user32.dll")] static extern bool DestroyIcon(IntPtr h);
 
     public static void Style(Form f)
     {

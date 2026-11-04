@@ -69,7 +69,7 @@ public sealed class Settings
     public List<string> SeenCards { get; set; } = new();         // off-by-default sections already applied once
     public List<string> HiddenCards { get; set; } = new();       // main window cards turned off in Settings: cpu, gpu, ssd, mode, screen, lights
 
-    static string Dir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AlienHelper");
+    static string Dir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppId.Key);
     static string File => Path.Combine(Dir, "settings.json");
     static readonly JsonSerializerOptions Opts = new() { WriteIndented = true };
 

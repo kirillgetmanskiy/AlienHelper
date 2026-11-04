@@ -16,7 +16,7 @@ public static class Diagnostics
 {
     public static string CreateReport(Controller c, SensorMonitor? mon)
     {
-        string name = $"AlienHelper-report-{DateTime.Now:yyyyMMdd-HHmmss}.zip";
+        string name = $"{AppId.Key}-report-{DateTime.Now:yyyyMMdd-HHmmss}.zip";
         string zipPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), name);
         using var zip = ZipFile.Open(zipPath, ZipArchiveMode.Create);
 

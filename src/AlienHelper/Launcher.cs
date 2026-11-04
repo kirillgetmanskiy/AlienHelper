@@ -80,8 +80,8 @@ public static class Launcher
 /// </summary>
 public static class ShowSignal
 {
-    const string Name = @"Local\AlienHelper.Show";
-    public const string ExitName = @"Local\AlienHelper.Exit";
+    const string Name = @"Local\" + AppId.Key + ".Show";
+    public const string ExitName = @"Local\" + AppId.Key + ".Exit";
 
     public static EventWaitHandle Create(string name = Name)
     {

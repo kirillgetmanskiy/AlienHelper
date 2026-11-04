@@ -12,10 +12,10 @@ namespace AlienHelper;
 public static class Autostart
 {
     const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    const string ValueName = "AlienHelper";
+    const string ValueName = AppId.Key;
 
     // scheduled tasks created by builds that started the app elevated without a prompt
-    const string LegacyLogonTask = "AlienHelper", LegacyLaunchTask = "AlienHelper-NoUAC";
+    const string LegacyLogonTask = AppId.Key, LegacyLaunchTask = AppId.Key + "-NoUAC";
 
     /// <summary>
     /// False in the MSIX package: there writes to HKCU are kept in the package's private registry, so Windows would never
@@ -95,12 +95,12 @@ public static class Autostart
     /// <summary>The exe under the installer's folder, or null when the app is not installed or the file is gone.</summary>
     static string? InstalledExe()
     {
-        const string key = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\{6F3C2B1E-8A47-4D5C-9E21-A1E7F0B4C3D9}_is1";
+        const string key = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\" + AppId.InstallerGuid + "_is1";
         try
         {
             using var k = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(key);
             if (k?.GetValue("InstallLocation") is not string dir) return null;
-            string exe = Path.Combine(dir, "AlienHelper.exe");
+            string exe = Path.Combine(dir, AppId.Exe);
             return File.Exists(exe) ? exe : null;
         }
         catch { return null; }

@@ -8,8 +8,8 @@ namespace AlienHelper;
 /// </summary>
 public static class Log
 {
-    /// <summary>Program name as shown to people. Files, folders, tasks and the exe keep "AlienHelper".</summary>
-    public const string AppTitle = "Alien Helper";
+    /// <summary>Program name as shown to people. Files, folders, tasks and the exe use <see cref="AppId.Key"/>.</summary>
+    public const string AppTitle = AppId.Title;
 
     /// <summary>Public source code (shown in About).</summary>
     public const string RepoUrl = "https://github.com/kirillgetmanskiy/AlienHelper";
@@ -17,7 +17,7 @@ public static class Log
     public const string ContactEmail = "kirill.getmanskiy@gmail.com";
 
     static readonly object _lock = new();
-    public static string Dir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AlienHelper");
+    public static string Dir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppId.Key);
     public static string LogDir => Path.Combine(Dir, "logs");
     static string CrashFlag => Path.Combine(Dir, "crash.flag");
 
