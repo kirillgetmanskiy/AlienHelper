@@ -100,6 +100,125 @@ public interface IPluginHost
 
     /// <summary>Raised when the user switches the theme.</summary>
     event EventHandler? ThemeChanged;
+
+    /// <summary>The in-game overlay: the plugin's own items in it, its mode and style.</summary>
+    IPluginOverlay Overlay { get; }
+}
+
+/// <summary>When the overlay is shown.</summary>
+public enum PluginOverlayMode
+{
+    /// <summary>Hidden.</summary>
+    Off,
+    /// <summary>Shown all the time.</summary>
+    Always,
+    /// <summary>Shown while a game is in front.</summary>
+    InGames,
+}
+
+/// <summary>How the overlay looks.</summary>
+public enum PluginOverlayStyle
+{
+    /// <summary>Rows with graphs.</summary>
+    Full,
+    /// <summary>A narrow column, values only.</summary>
+    Mini,
+    /// <summary>A horizontal bar with graphs.</summary>
+    Bar,
+    /// <summary>A thin strip with icons instead of names.</summary>
+    Icons,
+}
+
+/// <summary>
+/// The in-game overlay. Members can be used from any thread. Mode and Style are the user's choice and are saved:
+/// change them when the user asks for it (a menu item, a hotkey of the plugin), not on your own.
+/// </summary>
+public interface IPluginOverlay
+{
+    /// <summary>True while the overlay is on screen.</summary>
+    bool Visible { get; }
+
+    /// <summary>Where the overlay is on screen; empty while hidden.</summary>
+    Rectangle Bounds { get; }
+
+    /// <summary>When the overlay is shown. Setting it is the same as the user picking it in the menu.</summary>
+    PluginOverlayMode Mode { get; set; }
+
+    /// <summary>How the overlay looks.</summary>
+    PluginOverlayStyle Style { get; set; }
+
+    /// <summary>Shows the overlay or hides it, like the overlay hotkey.</summary>
+    void Toggle();
+
+    /// <summary>
+    /// Raised on the UI thread when the overlay is shown or hidden, or its mode, style or place changes.
+    /// </summary>
+    event EventHandler? Changed;
+
+    /// <summary>
+    /// True: screenshots and screen recordings (this plugin's own and other apps') do not show the overlay; it stays
+    /// on screen for the user. Hidden while any running plugin asks for it; the request goes when the plugin stops.
+    /// Needs Windows 10 2004 or later; does nothing before.
+    /// </summary>
+    bool HiddenFromCapture { get; set; }
+
+    /// <summary>
+    /// Adds an item at the end of the overlay, after the app's own rows. Dispose it to remove it; the host removes
+    /// the rest when the plugin stops.
+    /// </summary>
+    IPluginOverlayItem AddItem(string label);
+}
+
+/// <summary>
+/// A plugin's item in the overlay: a row in the full style, a segment in the bar, a value in the minimal styles.
+/// Properties can be set from any thread; the overlay redraws soon after.
+/// </summary>
+public interface IPluginOverlayItem : IDisposable
+{
+    /// <summary>The name, e.g. "REC". In the icon strip it comes before the value when there is no icon.</summary>
+    string Label { get; set; }
+
+    /// <summary>The value, e.g. "01:24".</summary>
+    string Value { get; set; }
+
+    /// <summary>A shorter value for the minimal styles; null (the default) for <see cref="Value"/>.</summary>
+    string? Compact { get; set; }
+
+    /// <summary>Small text next to the value in the full style and under it in the bar, e.g. "1080p 60".</summary>
+    string Extra { get; set; }
+
+    /// <summary>The value's color; null (the default) for the overlay's text color.</summary>
+    Color? Color { get; set; }
+
+    /// <summary>False: hidden for now. True by default.</summary>
+    bool Visible { get; set; }
+
+    /// <summary>Shown in the minimal styles (Mini, Icons) too. True by default.</summary>
+    bool Essential { get; set; }
+
+    /// <summary>
+    /// True: a graph of the samples added with <see cref="AddSample"/> under the value, in the full style and the bar.
+    /// </summary>
+    bool Graph { get; set; }
+
+    /// <summary>The graph's bottom value. 0 by default.</summary>
+    float GraphMin { get; set; }
+
+    /// <summary>The graph's top value. 100 by default.</summary>
+    float GraphMax { get; set; }
+
+    /// <summary>Adds a point to the graph; the last 240 are kept.</summary>
+    void AddSample(float value);
+
+    /// <summary>Removes the graph's points.</summary>
+    void ClearSamples();
+
+    /// <summary>
+    /// Draws the item's icon for the icon strip: the graphics, a square to draw in and the item's color. Null (the
+    /// default): no icon, the label is shown instead. Called on the UI thread while painting: keep it quick. If it
+    /// throws, the plugin is stopped.
+    /// </summary>
+    Action<Graphics, RectangleF, Color>? DrawIcon { get; set; }
 }
 
 /// <summary>Level of a log line.</summary>

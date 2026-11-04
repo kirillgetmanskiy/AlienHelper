@@ -42,6 +42,7 @@ public sealed class PluginManager : IDisposable
     readonly Settings _s;
     readonly Control _ui;
     readonly Action<string, string> _notify;
+    internal readonly OverlayManager Overlay;
     readonly List<PluginEntry> _plugins = new();
     readonly System.Windows.Forms.Timer _gameTimer = new() { Interval = 2000 };
     bool _game;
@@ -50,9 +51,9 @@ public sealed class PluginManager : IDisposable
     /// <summary>A plugin started, stopped or failed.</summary>
     public event Action? Changed;
 
-    public PluginManager(Settings s, Control ui, Action<string, string> notify)
+    public PluginManager(Settings s, Control ui, OverlayManager overlay, Action<string, string> notify)
     {
-        _s = s; _ui = ui; _notify = notify;
+        _s = s; _ui = ui; Overlay = overlay; _notify = notify;
         _gameTimer.Tick += (_, _) => CheckGame();
     }
 
@@ -335,12 +336,17 @@ sealed class PluginHost : IPluginHost
     readonly List<HotKey> _keys = new();
     bool _closed;
 
+    readonly PluginOverlay _overlay;
+
     public PluginHost(PluginManager m, PluginEntry p)
     {
         _m = m; _p = p;
         DataDirectory = Path.Combine(AlienHelper.Log.Dir, "plugins", p.Id);
         Directory.CreateDirectory(DataDirectory);
+        _overlay = new PluginOverlay(m, p);
     }
+
+    public IPluginOverlay Overlay => _overlay;
 
     public string AppVersion => typeof(PluginHost).Assembly.GetName().Version?.ToString(3) ?? "";
     public bool IsTestBuild => AppId.Test;
@@ -389,6 +395,7 @@ sealed class PluginHost : IPluginHost
         foreach (var k in _keys) k.Dispose();
         _keys.Clear();
         GameChanged = null; ThemeChanged = null; LanguageChanged = null;
+        _overlay.Close();
     }
 
     sealed class Removal : IDisposable
@@ -397,4 +404,147 @@ sealed class PluginHost : IPluginHost
         public Removal(Action a) => _a = a;
         public void Dispose() { _a?.Invoke(); _a = null; }
     }
+}
+
+/// <summary>What one plugin may do with the overlay (<see cref="IPluginOverlay"/>): its own items, mode, style.</summary>
+sealed class PluginOverlay : IPluginOverlay
+{
+    readonly PluginManager _m;
+    readonly PluginEntry _p;
+    readonly List<PluginOverlayItem> _items = new();
+    bool _closed, _hidden;
+
+    public PluginOverlay(PluginManager m, PluginEntry p)
+    {
+        _m = m; _p = p;
+        _m.Overlay.Changed += OnChanged;
+    }
+
+    OverlayManager O => _m.Overlay;
+    internal OverlayManager Manager => O;
+
+    public bool Visible => O.Visible;
+    public Rectangle Bounds => O.Bounds;
+
+    public PluginOverlayMode Mode
+    {
+        get => (PluginOverlayMode)O.Mode;
+        set { if (Enum.IsDefined(value)) Ui(() => { if (O.Mode != (int)value) O.Mode = (int)value; }); }
+    }
+
+    public PluginOverlayStyle Style
+    {
+        get => (PluginOverlayStyle)O.Style;
+        set { if (Enum.IsDefined(value)) Ui(() => { if (O.Style != (int)value) O.Style = (int)value; }); }
+    }
+
+    public void Toggle() => Ui(O.Toggle);
+
+    public event EventHandler? Changed;
+    void OnChanged() { if (!_closed) _m.Call(_p, "overlay event", () => Changed?.Invoke(this, EventArgs.Empty)); }
+
+    public bool HiddenFromCapture
+    {
+        get => _hidden;
+        set { _hidden = value; Ui(() => O.HideFromCapture(this, value)); }
+    }
+
+    public IPluginOverlayItem AddItem(string label)
+    {
+        var item = new PluginOverlayItem(this, label ?? "");
+        lock (_items) { if (_closed) return item; _items.Add(item); }   // after the plugin stopped: an item nobody sees
+        item.Row.Failed = ex => _m.Fail(_p, "overlay icon", ex);
+        Ui(() => { if (!item.Removed) O.AddItem(item.Row); });
+        return item;
+    }
+
+    internal void Remove(PluginOverlayItem item)
+    {
+        lock (_items) { if (!_items.Remove(item)) return; }
+        item.Removed = true;
+        Ui(() => O.RemoveItem(item.Row));
+    }
+
+    /// <summary>Runs on the UI thread, now when already there; nothing once the plugin stopped.</summary>
+    internal void Ui(Action a) => _m.RunOnUi(() => { if (!_closed) a(); });
+
+    /// <summary>The plugin stopped: its items and its capture request go (called on the UI thread).</summary>
+    internal void Close()
+    {
+        _closed = true;
+        O.Changed -= OnChanged;
+        Changed = null;
+        List<PluginOverlayItem> items;
+        lock (_items) { items = _items.ToList(); _items.Clear(); }
+        foreach (var it in items) { it.Removed = true; O.RemoveItem(it.Row); }
+        O.HideFromCapture(this, false);
+    }
+}
+
+/// <summary>
+/// A plugin's overlay item. The plugin may set it from any thread: values are kept here and copied to the overlay's
+/// <see cref="OverlayItem"/> on the UI thread, at most once per batch of changes.
+/// </summary>
+sealed class PluginOverlayItem : IPluginOverlayItem
+{
+    const int SampleCap = 240;
+    readonly PluginOverlay _o;
+    readonly object _lock = new();
+    readonly List<float> _samples = new();
+    string _label, _value = "", _extra = "";
+    string? _compact;
+    Color? _color;
+    bool _visible = true, _essential = true, _graph;
+    float _min, _max = 100;
+    Action<Graphics, RectangleF, Color>? _icon;
+    int _pending;
+
+    internal readonly OverlayItem Row = new();
+    internal volatile bool Removed;
+
+    public PluginOverlayItem(PluginOverlay o, string label) { _o = o; _label = label; Row.Label = label; }
+
+    T Get<T>(ref T field) { lock (_lock) return field; }
+    void Set<T>(ref T field, T value) { lock (_lock) field = value; Changed(); }
+
+    public string Label { get => Get(ref _label); set => Set(ref _label, value ?? ""); }
+    public string Value { get => Get(ref _value); set => Set(ref _value, value ?? ""); }
+    public string? Compact { get => Get(ref _compact); set => Set(ref _compact, value); }
+    public string Extra { get => Get(ref _extra); set => Set(ref _extra, value ?? ""); }
+    public Color? Color { get => Get(ref _color); set => Set(ref _color, value); }
+    public bool Visible { get => Get(ref _visible); set => Set(ref _visible, value); }
+    public bool Essential { get => Get(ref _essential); set => Set(ref _essential, value); }
+    public bool Graph { get => Get(ref _graph); set => Set(ref _graph, value); }
+    public float GraphMin { get => Get(ref _min); set => Set(ref _min, value); }
+    public float GraphMax { get => Get(ref _max); set => Set(ref _max, value); }
+    public Action<Graphics, RectangleF, Color>? DrawIcon { get => Get(ref _icon); set => Set(ref _icon, value); }
+
+    public void AddSample(float value)
+    {
+        lock (_lock) { _samples.Add(value); if (_samples.Count > SampleCap) _samples.RemoveRange(0, _samples.Count - SampleCap); }
+        Changed();
+    }
+
+    public void ClearSamples() { lock (_lock) _samples.Clear(); Changed(); }
+
+    void Changed()
+    {
+        if (Removed || Interlocked.Exchange(ref _pending, 1) == 1) return;   // one copy covers every change before it
+        _o.Ui(Apply);
+    }
+
+    void Apply()
+    {
+        Interlocked.Exchange(ref _pending, 0);
+        if (Removed) return;
+        lock (_lock)
+        {
+            (Row.Label, Row.Value, Row.Compact, Row.Extra, Row.Color) = (_label, _value, _compact, _extra, _color);
+            (Row.Visible, Row.Essential, Row.Min, Row.Max, Row.DrawIcon) = (_visible, _essential, _min, _max, _icon);
+            Row.History = _graph ? _samples.ToList() : null;
+        }
+        _o.Manager.ItemsChanged();
+    }
+
+    public void Dispose() => _o.Remove(this);
 }
