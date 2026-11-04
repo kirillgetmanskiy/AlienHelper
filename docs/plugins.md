@@ -139,8 +139,9 @@ a plugin, delete its folder (and restart the app if it was running).
 
 The Store build of Alien Helper (MSIX, branch `no-uac-bypass`) lists the app's add-ons in **Settings → Plugins →
 Add-ons in the Microsoft Store** with their prices. **Buy** opens the Store's own purchase dialog, then the Store
-downloads and installs the add-on's package, and the plugin is turned on at once. The builds from the Setup.exe have no
-Store and do not show the button.
+downloads and installs the add-on's package, and the plugin is turned on at once. The Store build loads plugins from these
+add-ons only, never from the plugins folder: the Store does not allow adding code to an app from outside it (policy
+10.2.2). The builds from the Setup.exe have no Store: they load the folder and do not show the button.
 
 An add-on is a *durable with a package*: its package is an MSIX **optional package** of Alien Helper. Windows installs
 it under `C:\Program Files\WindowsApps\`, where only the system can write, so it passes the same check as the plugins
@@ -201,7 +202,8 @@ folder. The app loads optional packages of its own publisher only.
 
 Платный плагин можно продавать как дополнение (add-on) Alien Helper в Microsoft Store. В Store-версии программы есть
 кнопка «Настройки → Плагины → Дополнения в Microsoft Store»: там видны цены, а «Купить» открывает окно покупки Store.
-После покупки Store сам скачивает и ставит пакет дополнения, и плагин сразу включается. Дополнение — это *durable с
+После покупки Store сам скачивает и ставит пакет дополнения, и плагин сразу включается. Store-версия загружает плагины только из
+таких дополнений, папка плагинов в ней не используется (правило Store 10.2.2). Дополнение — это *durable с
 пакетом*, необязательный (optional) MSIX-пакет Alien Helper. Для него нужно разрешение Microsoft на optional packages.
 Шаги и пример манифеста — в английской части выше («Selling a plugin as a Microsoft Store add-on»).
 
