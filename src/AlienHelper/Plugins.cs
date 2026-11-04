@@ -61,6 +61,7 @@ public sealed class PluginManager : IDisposable
     internal readonly OverlayManager Overlay;
     readonly List<PluginEntry> _plugins = new();
     readonly System.Windows.Forms.Timer _gameTimer = new() { Interval = 2000 };
+    readonly System.Windows.Forms.Timer _licenseRetry = new() { Interval = 60_000 };
     bool _game;
 
     public IReadOnlyList<PluginEntry> Plugins => _plugins;
@@ -71,6 +72,7 @@ public sealed class PluginManager : IDisposable
     {
         _s = s; _ui = ui; Overlay = overlay; _notify = notify;
         _gameTimer.Tick += (_, _) => CheckGame();
+        _licenseRetry.Tick += (_, _) => { _licenseRetry.Stop(); _ = RefreshLicensesAsync(); };
     }
 
     /// <summary>Finds the plugins and starts the ones the user turned on.</summary>
@@ -89,9 +91,17 @@ public sealed class PluginManager : IDisposable
     public async Task RefreshLicensesAsync()
     {
         var owned = await StoreAddons.OwnedAsync();
+        if (owned == null && !_licenseRetry.Enabled) _licenseRetry.Start();   // the Store did not answer: ask again soon
         foreach (var p in _plugins.Where(p => p.Gated).ToList())
         {
             p.Owned = owned?.Contains(p.Manifest!.StoreId!);
+            // bought: on the first time it is seen owned, however it was bought; the user's switch counts after that
+            if (p.Owned == true && !_s.OwnedAddons.Contains(p.Id, StringComparer.OrdinalIgnoreCase))
+            {
+                _s.OwnedAddons.Add(p.Id);
+                if (!IsEnabled(p)) { _s.EnabledPlugins.Add(p.Id); Log.Info($"plugin {p.Id}: bought, turned on"); }
+                _s.Save();
+            }
             if (p.Owned == true && IsEnabled(p) && !p.Running) Load(p);
             else if (p.Owned == false && p.Running) { Stop(p); p.Unloading = true; Log.Info($"plugin {p.Id}: add-on not owned"); }
         }
@@ -296,6 +306,7 @@ public sealed class PluginManager : IDisposable
     public void Dispose()
     {
         _gameTimer.Dispose();
+        _licenseRetry.Dispose();
         foreach (var p in _plugins.Where(x => x.Running).ToList()) Stop(p);
     }
 

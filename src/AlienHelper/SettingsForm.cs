@@ -478,6 +478,7 @@ public sealed class SettingsForm : Form
                 info.ForeColor = p.Problem != null || buyError != null ? Warn : Muted;
                 open.Visible = p.Running;
                 buy.Visible = p.Gated && p.Owned == false;
+                t.On = _plugins.IsEnabled(p);   // a plugin just bought turns on by itself
                 t.Enabled = (p.Problem == null && !notOwned) || t.On;   // broken or not bought: it can only be turned off
             }
             buy.Click += async (_, _) =>
