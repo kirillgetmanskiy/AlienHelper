@@ -29,7 +29,8 @@ class library that builds against `AlienHelper.PluginApi.dll` and is installed b
   "author": "Your name",
   "description": "Records the screen and the sound",
   "assembly": "ScreenRecorder.dll",   // a file in the plugin's folder
-  "api": 1                            // PluginApi.Version the plugin was built for
+  "api": 1,                           // PluginApi.Version the plugin was built for
+  "storeId": "9XXXXXXXXXXX"           // optional: the Microsoft Store add-on it is sold as
 }
 ```
 
@@ -134,6 +135,47 @@ The plugin's installer runs as administrator and copies the files to
 `%ProgramFiles%\AlienHelper\Plugins\<id>\` (or `AlienHelperTest` for the test build). The user then turns the plugin on in **Settings → Plugins**. To remove
 a plugin, delete its folder (and restart the app if it was running).
 
+## Selling a plugin as a Microsoft Store add-on
+
+The Store build of Alien Helper (MSIX, branch `no-uac-bypass`) lists the app's add-ons in **Settings → Plugins →
+Add-ons in the Microsoft Store** with their prices. **Buy** opens the Store's own purchase dialog, then the Store
+downloads and installs the add-on's package, and the plugin is turned on at once. The builds from the Setup.exe have no
+Store and do not show the button.
+
+An add-on is a *durable with a package*: its package is an MSIX **optional package** of Alien Helper. Windows installs
+it under `C:\Program Files\WindowsApps\`, where only the system can write, so it passes the same check as the plugins
+folder. The app loads optional packages of its own publisher only.
+
+1. Ask Microsoft for permission to use optional packages: the Store requires it
+   ([Windows developer support](https://developer.microsoft.com/windows/support)).
+2. Partner Center → Alien Helper → **Add-ons → Create add-on**, type **Durable**. Set the price (and a free trial if
+   wanted), turn on the package upload, and note the add-on's Store ID for `storeId` in plugin.json.
+3. Make the package: the plugin's folder as it would be in `Plugins\<id>\` (plugin.json at the root, the assemblies
+   next to it), with an `AppxManifest.xml` and no `Applications`:
+
+   ```xml
+   <Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+            xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+            xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+            IgnorableNamespaces="uap uap3">
+     <!-- Name and Publisher: the add-on's identity from Partner Center -->
+     <Identity Name="..." Publisher="CN=4F657209-00E8-4045-8043-BF61B6723400" Version="1.0.0.0" ProcessorArchitecture="x64" />
+     <Properties>
+       <DisplayName>Alien Helper VideoCap</DisplayName>
+       <PublisherDisplayName>LobsterSoft</PublisherDisplayName>
+       <Logo>Assets\StoreLogo.png</Logo>
+     </Properties>
+     <Dependencies>
+       <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
+       <uap3:MainPackageDependency Name="35916LobsterSoft.AlienHelper" />
+     </Dependencies>
+     <Resources><Resource Language="en-us" /></Resources>
+   </Package>
+   ```
+
+   `makeappx pack /d <folder> /p VideoCap.msix`, then upload it to the add-on's submission.
+4. The plugin itself needs nothing else: the same `IPlugin` as from the folder.
+
 ---
 
 # Плагины
@@ -156,5 +198,11 @@ a plugin, delete its folder (and restart the app if it was running).
 Плагин может добавлять в оверлей свои строки (например «REC 01:24» с красной точкой), рисовать для них график и значок,
 скрывать оверлей из записи экрана и скриншотов, а по действию пользователя менять режим и вид оверлея
 (`host.Overlay`, API 1.1).
+
+Платный плагин можно продавать как дополнение (add-on) Alien Helper в Microsoft Store. В Store-версии программы есть
+кнопка «Настройки → Плагины → Дополнения в Microsoft Store»: там видны цены, а «Купить» открывает окно покупки Store.
+После покупки Store сам скачивает и ставит пакет дополнения, и плагин сразу включается. Дополнение — это *durable с
+пакетом*, необязательный (optional) MSIX-пакет Alien Helper. Для него нужно разрешение Microsoft на optional packages.
+Шаги и пример манифеста — в английской части выше («Selling a plugin as a Microsoft Store add-on»).
 
 Формат `plugin.json`, пример плагина, работа с оверлеем и список возможностей `IPluginHost` — в английской части выше.
