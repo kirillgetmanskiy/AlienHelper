@@ -478,22 +478,26 @@ public sealed class SettingsForm : Form
         void OnChanged() { if (!IsDisposed) foreach (var r in refresh) r(); }
         _plugins.Changed += OnChanged;
         FormClosed += (_, _) => _plugins.Changed -= OnChanged;
-        Note(L.T("plugins.hint"), ref cy, Muted);
-        var path = Note(PluginManager.Dir, ref cy, Blend(Muted, Fg, 0.5f));
-        path.Top -= S(4);
-        cy = path.Bottom + S(4);
-        var folder = new PillButton(L.T("plugins.folder")) { Bounds = new Rectangle(S(Pad), cy, (Inner - S(6)) / 2, S(28)) };
-        folder.Click += (_, _) =>
+        if (PluginManager.StoreOnly)   // the Store build: plugins come as the Store's add-ons only
         {
-            try { Directory.CreateDirectory(PluginManager.Dir); } catch { }   // under Program Files: needs admin rights
-            if (Directory.Exists(PluginManager.Dir)) System.Diagnostics.Process.Start("explorer.exe", PluginManager.Dir);
-        };
-        card.Controls.Add(folder);
-        if (StoreAddons.Available)   // the Store build: plugins sold as add-ons
-        {
-            var store = new PillButton(L.T("store.title")) { Bounds = new Rectangle(folder.Right + S(6), cy, folder.Width, S(28)) };
+            Note(L.T("plugins.storehint"), ref cy, Muted);
+            var store = new PillButton(L.T("store.title")) { Bounds = new Rectangle(S(Pad), cy, Inner, S(28)) };
             store.Click += (_, _) => new StoreAddonsForm(_plugins).Show(this);
             card.Controls.Add(store);
+        }
+        else
+        {
+            Note(L.T("plugins.hint"), ref cy, Muted);
+            var path = Note(PluginManager.Dir, ref cy, Blend(Muted, Fg, 0.5f));
+            path.Top -= S(4);
+            cy = path.Bottom + S(4);
+            var folder = new PillButton(L.T("plugins.folder")) { Bounds = new Rectangle(S(Pad), cy, (Inner - S(6)) / 2, S(28)) };
+            folder.Click += (_, _) =>
+            {
+                try { Directory.CreateDirectory(PluginManager.Dir); } catch { }   // under Program Files: needs admin rights
+                if (Directory.Exists(PluginManager.Dir)) System.Diagnostics.Process.Start("explorer.exe", PluginManager.Dir);
+            };
+            card.Controls.Add(folder);
         }
         cy += S(28) + S(6);
         return Finish(card, cy);

@@ -42,6 +42,12 @@ public sealed class PluginManager : IDisposable
 {
     public static string Dir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), AppId.Key, "Plugins");
 
+    /// <summary>
+    /// The Store build loads plugins from the Store's add-ons only, never from the folder: the Store does not allow
+    /// adding code to an app from outside it (policy 10.2.2).
+    /// </summary>
+    public static bool StoreOnly => StoreAddons.Available;
+
     readonly Settings _s;
     readonly Control _ui;
     readonly Action<string, string> _notify;
@@ -70,14 +76,14 @@ public sealed class PluginManager : IDisposable
     void Discover()
     {
         _plugins.Clear();
-        if (Directory.Exists(Dir))
+        if (!StoreOnly && Directory.Exists(Dir))
         {
             string? unsafeRoot = Unsafe(Path.GetDirectoryName(Dir)!, recurse: false) ?? Unsafe(Dir, recurse: false);
             foreach (var folder in Directory.GetDirectories(Dir).OrderBy(d => d, StringComparer.OrdinalIgnoreCase))
                 Add(folder, unsafeRoot, store: false);
         }
         foreach (var folder in StoreAddons.PackageFolders()) Add(folder, null, store: true);
-        Log.Info($"plugins: {_plugins.Count} in {Dir} and the Store's add-ons");
+        Log.Info(StoreOnly ? $"plugins: {_plugins.Count} from the Store's add-ons" : $"plugins: {_plugins.Count} in {Dir}");
     }
 
     /// <summary>Looks again for Store add-ons (one was just installed): the new ones, the ones turned on started.</summary>
