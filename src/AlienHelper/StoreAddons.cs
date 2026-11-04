@@ -59,18 +59,30 @@ public static class StoreAddons
 
     /// <summary>
     /// The Store IDs of the add-ons the user owns now; null when the Store cannot say (outside the Store build, or an
-    /// error). A license key is "&lt;Store ID&gt;/&lt;SKU&gt;".
+    /// error). A durable without a package is not in the app license's AddOnLicenses (it stays empty), only in the
+    /// user's collection, so both are asked. A license key is "&lt;Store ID&gt;/&lt;SKU&gt;".
     /// </summary>
     public static async Task<HashSet<string>?> OwnedAsync()
     {
         if (!Available) return null;
         try
         {
-            var license = await Context(IntPtr.Zero).GetAppLicenseAsync();
-            return license.AddOnLicenses
+            var ctx = Context(IntPtr.Zero);
+            var license = await ctx.GetAppLicenseAsync();
+            var owned = license.AddOnLicenses
                 .Where(kv => kv.Value.IsActive)
                 .Select(kv => (kv.Value.SkuStoreId is { Length: > 0 } sku ? sku : kv.Key).Split('/')[0])
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var collection = await ctx.GetUserCollectionAsync(new[] { "Durable" });
+            if (collection.ExtendedError != null)
+            {
+                Log.Warn($"store: collection: {collection.ExtendedError.Message}");
+                if (owned.Count == 0) return null;   // offline, say: not known, rather than "not bought"
+            }
+            foreach (var p in collection.Products.Values.Where(p => p.IsInUserCollection || p.Skus.Any(s => s.IsInUserCollection)))
+                owned.Add(p.StoreId);
+            Log.Info($"store: owned add-ons: {(owned.Count > 0 ? string.Join(", ", owned) : "none")}");
+            return owned;
         }
         catch (Exception ex) { Log.Error("store: licenses", ex); return null; }
     }
