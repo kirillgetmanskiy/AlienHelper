@@ -9,19 +9,13 @@ using static AlienHelper.UI.Theme;
 namespace AlienHelper;
 
 /// <summary>
-/// Small always-on-top, click-through stats panel for games. Shown automatically while a fullscreen
-/// (or borderless fullscreen) app is in the foreground, or manually with Ctrl+Shift+O.
+/// Small always-on-top, click-through stats panel for games. Shown automatically while a game is in the foreground
+/// (<see cref="GameDetector"/>), or manually with Ctrl+Shift+O.
 /// Exclusive-fullscreen D3D games draw over every window, so the overlay is only visible in borderless mode.
 /// While visible it can be moved with Ctrl+Shift+Alt+arrows (those hotkeys exist only while it is shown).
 /// </summary>
 public sealed class OverlayManager : IDisposable
 {
-    internal static readonly HashSet<string> NotGames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "explorer", "chrome", "msedge", "firefox", "opera", "brave", "vivaldi", "vlc", "mpc-hc64", "mpc-be64",
-        "PotPlayerMini64", "Video.UI", "Microsoft.Media.Player", "POWERPNT", "AlienHelper", "ApplicationFrameHost",
-        "ShellExperienceHost", "SearchHost", "StartMenuExperienceHost", "LockApp",
-    };
 
     public const int StyleCount = 4;
 
@@ -40,6 +34,7 @@ public sealed class OverlayManager : IDisposable
     public OverlayManager(Controller c, SensorMonitor mon)
     {
         _c = c; _mon = mon;
+        GameDetector.Init(c.S);
         _detect.Tick += (_, _) => Detect();
         _detect.Start();
     }
@@ -72,7 +67,7 @@ public sealed class OverlayManager : IDisposable
             _manual = value == 1;
             _c.S.OverlayAuto = value == 2;
             _c.S.Save();
-            _auto = value == 2 && FullscreenGameInFront();
+            _auto = value == 2 && GameDetector.InFront();
             Apply();
             Changed?.Invoke();
         }
@@ -80,7 +75,7 @@ public sealed class OverlayManager : IDisposable
 
     void Detect()
     {
-        bool game = Auto && FullscreenGameInFront();
+        bool game = GameDetector.InFront() && Auto;   // asked even when off: the tray menu offers the app in front
         if (game != _auto) { _auto = game; Apply(); }
         else if (Visible) _form!.KeepOnTop();
     }
@@ -133,28 +128,6 @@ public sealed class OverlayManager : IDisposable
         Changed?.Invoke();
     }
 
-    internal static bool FullscreenGameInFront()
-    {
-        var hwnd = GetForegroundWindow();
-        if (hwnd == IntPtr.Zero) return false;
-        var cls = new StringBuilder(64);
-        GetClassName(hwnd, cls, cls.Capacity);
-        if (cls.ToString() is "Progman" or "WorkerW" or "Shell_TrayWnd") return false;
-        if (!GetWindowRect(hwnd, out var wr)) return false;
-        var mi = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
-        if (!GetMonitorInfo(MonitorFromWindow(hwnd, 2), ref mi)) return false;
-        var m = mi.rcMonitor;
-        bool covers = wr.Left <= m.Left && wr.Top <= m.Top && wr.Right >= m.Right && wr.Bottom >= m.Bottom;
-        if (!covers) return false;
-        GetWindowThreadProcessId(hwnd, out uint pid);
-        try
-        {
-            using var p = Process.GetProcessById((int)pid);
-            return !NotGames.Contains(p.ProcessName);
-        }
-        catch { return false; }
-    }
-
     public void Dispose()
     {
         UnregisterMoveKeys();
@@ -162,15 +135,6 @@ public sealed class OverlayManager : IDisposable
         _frames.Dispose();
         _form?.Dispose();
     }
-
-    [StructLayout(LayoutKind.Sequential)] struct RECT { public int Left, Top, Right, Bottom; }
-    [StructLayout(LayoutKind.Sequential)] struct MONITORINFO { public int cbSize; public RECT rcMonitor, rcWork; public uint dwFlags; }
-    [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
-    [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out RECT r);
-    [DllImport("user32.dll")] static extern IntPtr MonitorFromWindow(IntPtr h, uint flags);
-    [DllImport("user32.dll")] static extern bool GetMonitorInfo(IntPtr m, ref MONITORINFO mi);
-    [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr h, StringBuilder s, int max);
 }
 
 public enum OvIcon { None, Fps, Frame, Cpu, Gpu, Power, Vram, Ram, Fan, Mode }
@@ -356,9 +320,8 @@ public sealed class OverlayForm : Form
         string W = L.T("u.w"), GB = L.T("u.gb"), MS = L.T("u.ms");
 
         // the rows stay in place so nothing moves when a game starts, but their values belong to games only: browsers,
-        // players and apps such as Electron ones present frames too, so numbers show only while a full-screen
-        // (exclusive or borderless) non-browser window is in front
-        bool game = s != null && !OverlayManager.NotGames.Contains(s.Process) && OverlayManager.FullscreenGameInFront();
+        // players and apps such as Electron ones present frames too, so numbers show only while a game is in front
+        bool game = s != null && !GameDetector.NotGames.Contains(s.Process) && GameDetector.InFront();
         if (game) _gameUntil = Environment.TickCount64 + 5000;
         else game = Environment.TickCount64 < _gameUntil;
         _game = game;

@@ -122,6 +122,9 @@ public static class L
         ["ov.mode"] = new[] { "Показ", "Show", "Affichage", "Mostrar", "表示", "显示" },
         ["ov.mode.off"] = new[] { "Выкл", "Off", "Désactivé", "Apagado", "オフ", "关闭" },
         ["ov.mode.on"] = new[] { "Всегда", "Always", "Toujours", "Siempre", "常に", "始终" },
+        ["ov.app"] = new[] { "Приложение «{0}»", "App “{0}”", "Application « {0} »", "Aplicación «{0}»", "アプリ「{0}」", "应用“{0}”" },
+        ["ov.app.game"] = new[] { "Считать игрой", "Count as a game", "Compter comme un jeu", "Contar como juego", "ゲームとして扱う", "视为游戏" },
+        ["ov.app.notgame"] = new[] { "Не игра", "Not a game", "Pas un jeu", "No es un juego", "ゲームではない", "不是游戏" },
         ["ov.mode.games"] = new[] { "В играх", "In games", "En jeu", "En juegos", "ゲーム中", "游戏中" },
         ["card.power"] = new[] { "Питание", "Power", "Alimentation", "Energía", "電源", "电源" },
         ["pawn.core"] = new[]

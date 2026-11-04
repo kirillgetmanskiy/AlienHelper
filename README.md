@@ -139,14 +139,19 @@ Alien Helper is free and open source. If it is useful to you, you can support it
 - Game overlay: a translucent panel on top of all windows; clicks pass through it. It shows CPU/GPU,
   clocks, CPU and GPU power, VRAM, RAM, fans and the mode.
   - Show: **Off**, **Always** (or the hotkey), **In games** — in **Settings** → **Overlay** and the tray menu.
-    FPS and frame time appear only while a full-screen game is in front (not for browsers, players or apps).
+    FPS and frame time appear only while a game is in front (not for browsers, players or apps).
   - 4 styles (**Settings** → **Overlay**, or the tray): **Full** (rows with graphs), **Mini** (a column of values),
     **Bar** (a horizontal strip with sparklines), **Icons** (one line, drawn icons instead of words).
   - Moving: Ctrl+Shift+Alt+arrows (can be held). These shortcuts are registered only while the overlay is visible.
     The position is saved; choosing a corner in the tray resets it.
   - Show it manually with the hotkey (`Ctrl+Shift+O` by default), the switch in **Settings** or the tray.
-    A separate **Automatically in games** switch shows the overlay when a full-screen window is in the foreground
-    (browsers and players are excluded). The screen corner is chosen in the tray.
+    A separate **Automatically in games** switch shows the overlay while a game is in the foreground. The screen
+    corner is chosen in the tray.
+  - What counts as a game: a game Windows itself has seen run (Game Bar and Game Mode keep that list), or one from a
+    Steam, Epic, GOG, EA, Ubisoft or Xbox / Game Pass library, also in a window. Any other app counts only while it
+    covers the screen and keeps the GPU busy, so a maximized editor, messenger or video does not. If it guesses
+    wrong, open the tray → **Overlay** while the app was the last one in front and pick **Count as a game** or
+    **Not a game** (a second click hands it back to the detector).
   - Games in exclusive full-screen mode draw over all windows. To see the overlay,
     switch the game to borderless windowed mode.
   - FPS, frame time (average and maximum) and 1% low are computed from ETW Present events
