@@ -44,6 +44,7 @@ public sealed class Settings
     public bool OverlayAuto { get; set; } = true;   // show the overlay while a game is in front
     public List<string> GameApps { get; set; } = new();      // process names the user counts as games (tray → Overlay)
     public List<string> NotGameApps { get; set; } = new();   // and as not games, whatever the detector thinks
+    public List<string> EnabledPlugins { get; set; } = new(); // plugin ids the user turned on (Settings → Plugins)
     public int OverlayCorner { get; set; }          // 0 top-left, 1 top-right, 2 bottom-left, 3 bottom-right
     public int OverlayStyle { get; set; }           // 0 full, 1 minimal, 2 horizontal, 3 icon strip
     public int? OverlayX { get; set; }              // hand-placed position (Ctrl+Shift+Alt+arrows), null = corner

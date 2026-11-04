@@ -74,6 +74,8 @@ public sealed class TrayApp : ApplicationContext
         _tray.ContextMenuStrip = new ContextMenuStrip { Renderer = new Theme.MenuRenderer(), ShowImageMargin = true };
         _tray.ContextMenuStrip.Opening += (_, _) => BuildMenu();
         BuildMenu();
+        _plugins = new PluginManager(_c.S, _invoker, (title, text) => _tray.ShowBalloonTip(5000, title, text, ToolTipIcon.None));
+        _plugins.Start();
 
         _mon.Updated += UpdateTooltip;
         SystemEvents.PowerModeChanged += OnPowerMode;
@@ -178,6 +180,7 @@ public sealed class TrayApp : ApplicationContext
         }
         foreach (ToolStripItem i in ov.DropDownItems) i.ForeColor = Theme.Fg;
         m.Items.Add(ov);
+        if (_plugins != null) foreach (var pi in _plugins.MenuItems(p => _plugins.OpenSettings(p, null))) m.Items.Add(pi);
         var lang = new ToolStripMenuItem(L.T("opt.lang"));
         foreach (var (code, name) in L.Languages)
         {
@@ -211,6 +214,7 @@ public sealed class TrayApp : ApplicationContext
     void SetLanguage(string code)
     {
         L.Set(code);
+        _plugins?.LanguageChanged();
         _c.S.Language = code;
         _c.S.Save();
         RebuildWindows();
@@ -223,6 +227,7 @@ public sealed class TrayApp : ApplicationContext
         Theme.NumbersOnly = _c.S.NumbersOnly;
         RebuildWindows();
         _tray.ContextMenuStrip!.Renderer = new Theme.MenuRenderer();
+        _plugins?.ThemeChanged();
     }
 
     /// <summary>Recreates the open windows in place (language, theme or layout changed).</summary>
@@ -328,12 +333,13 @@ public sealed class TrayApp : ApplicationContext
     }
 
     SettingsForm? _settings;
+    PluginManager? _plugins;   // created once the tray icon exists: plugins may show notifications from it
 
     void OpenSettings()
     {
         if (_settings == null || _settings.IsDisposed)
         {
-            _settings = new SettingsForm(_c, _overlay, SetLanguage, ShowAbout, ApplyHotkeys, CollectReport);
+            _settings = new SettingsForm(_c, _overlay, _plugins!, SetLanguage, ShowAbout, ApplyHotkeys, CollectReport);
             _settings.LookChanged = ApplyLook;
             _settings.CardsChanged = () =>
             {
@@ -504,6 +510,7 @@ public sealed class TrayApp : ApplicationContext
 
     protected override void ExitThreadCore()
     {
+        _plugins?.Dispose();   // first: a plugin may still use the hardware or the tray
         _c.RememberMode();   // the mode may have been switched with the G key while nothing was polled
         Log.Info("exit");
         _curves.Dispose();   // no curve write may follow the reset below
