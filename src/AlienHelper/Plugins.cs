@@ -25,8 +25,12 @@ public sealed class PluginEntry
     public bool Running => Host != null;
     /// <summary>Stopped this session: its code stays loaded until the app restarts.</summary>
     public bool Unloading { get; internal set; }
-    /// <summary>Installed from the Microsoft Store as an add-on (an optional package of the app).</summary>
+    /// <summary>Installed from the Microsoft Store as an add-on (an optional package of the app) or in the app's package.</summary>
     public bool FromStore { get; init; }
+    /// <summary>Sold as a Store add-on: in the Store build it loads only while the user owns it.</summary>
+    public bool Gated => PluginManager.StoreOnly && Manifest?.StoreId != null;
+    /// <summary>Whether the user owns the add-on; null until the Store answered.</summary>
+    public bool? Owned { get; internal set; }
     public string Id => Manifest?.Id ?? Path.GetFileName(Folder);
     public string Title => Manifest is { } m ? $"{m.Name} {m.Version}" : Path.GetFileName(Folder);
 }
@@ -47,6 +51,9 @@ public sealed class PluginManager : IDisposable
     /// adding code to an app from outside it (policy 10.2.2).
     /// </summary>
     public static bool StoreOnly => StoreAddons.Available;
+
+    /// <summary>Plugins that ship inside the app's Store package (Plugins\&lt;id&gt; next to the exe), sold as license-only add-ons.</summary>
+    static string BundledDir => Path.Combine(AppContext.BaseDirectory, "Plugins");
 
     readonly Settings _s;
     readonly Control _ui;
@@ -71,11 +78,42 @@ public sealed class PluginManager : IDisposable
     {
         Discover();
         foreach (var p in _plugins.Where(p => _s.EnabledPlugins.Contains(p.Id))) Load(p);
+        if (_plugins.Any(p => p.Gated))
+        {
+            StoreAddons.LicensesChanged += () => RunOnUi(() => _ = RefreshLicensesAsync());
+            _ = RefreshLicensesAsync();
+        }
+    }
+
+    /// <summary>Asks the Store which add-ons the user owns: starts the ones bought and turned on, stops the ones no longer owned.</summary>
+    public async Task RefreshLicensesAsync()
+    {
+        var owned = await StoreAddons.OwnedAsync();
+        foreach (var p in _plugins.Where(p => p.Gated).ToList())
+        {
+            p.Owned = owned?.Contains(p.Manifest!.StoreId!);
+            if (p.Owned == true && IsEnabled(p) && !p.Running) Load(p);
+            else if (p.Owned == false && p.Running) { Stop(p); p.Unloading = true; Log.Info($"plugin {p.Id}: add-on not owned"); }
+        }
+        Changed?.Invoke();
+    }
+
+    /// <summary>Buys a plugin that ships in the app's package (the Store's dialog) and turns it on. Null when bought.</summary>
+    public async Task<string?> BuyAsync(PluginEntry p, IntPtr owner)
+    {
+        var (bought, error) = await StoreAddons.BuyAndInstallAsync(p.Manifest!.StoreId!, owner, install: false);
+        if (!bought) return error;
+        await RefreshLicensesAsync();
+        if (p.Owned == true) SetEnabled(p, true);
+        return null;
     }
 
     void Discover()
     {
         _plugins.Clear();
+        if (StoreOnly && Directory.Exists(BundledDir))
+            foreach (var folder in Directory.GetDirectories(BundledDir).OrderBy(d => d, StringComparer.OrdinalIgnoreCase))
+                Add(folder, Unsafe(BundledDir, recurse: false), store: true);
         if (!StoreOnly && Directory.Exists(Dir))
         {
             string? unsafeRoot = Unsafe(Path.GetDirectoryName(Dir)!, recurse: false) ?? Unsafe(Dir, recurse: false);
@@ -142,6 +180,7 @@ public sealed class PluginManager : IDisposable
     void Load(PluginEntry p)
     {
         if (p.Problem != null || p.Manifest is not { } m) return;
+        if (p.Gated && p.Owned != true) return;   // not bought (or the Store has not answered yet)
         try
         {
             if (p.Instance == null)
@@ -321,7 +360,10 @@ public sealed class PluginManager : IDisposable
 /// </summary>
 sealed class PluginLoadContext : AssemblyLoadContext
 {
-    static readonly string Api = typeof(IPlugin).Assembly.GetName().Name!;
+    // always the app's copies: the plugin API, and the WinRT runtime and projection (two of them in one process
+    // would fight over the same COM objects); a plugin builds against Windows SDK 10.0.22621 or older
+    static readonly HashSet<string> Shared = new(StringComparer.OrdinalIgnoreCase)
+        { typeof(IPlugin).Assembly.GetName().Name!, "WinRT.Runtime", "Microsoft.Windows.SDK.NET" };
     readonly string _dir;
     readonly AssemblyDependencyResolver? _deps;
 
@@ -334,7 +376,7 @@ sealed class PluginLoadContext : AssemblyLoadContext
 
     protected override Assembly? Load(AssemblyName name)
     {
-        if (name.Name == Api) return null;   // always the app's copy
+        if (Shared.Contains(name.Name!)) return null;   // the app's copy
         string? path = _deps?.ResolveAssemblyToPath(name);
         if (path == null)
         {

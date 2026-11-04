@@ -457,20 +457,38 @@ public sealed class SettingsForm : Form
             open.Location = new Point(S(Pad) + Inner - open.Width, cy);
             open.Click += (_, _) => _plugins.OpenSettings(p, this);
             card.Controls.Add(open);
+            var buy = SmallButtonFor(L.T("plugins.buy"));
+            buy.Active = true;
+            buy.Location = new Point(S(Pad) + Inner - buy.Width, cy);
+            card.Controls.Add(buy);
             // description and author, then the state; room for two lines of each
             string about = string.Join(" · ", new[] { p.Manifest?.Description, p.Manifest?.Author }.Where(s => !string.IsNullOrWhiteSpace(s)));
-            int w = Inner - open.Width - S(6);
+            int w = Inner - Math.Max(open.Width, buy.Width) - S(6);
             var info = new Label { Font = font, AutoSize = false, Bounds = new Rectangle(S(Pad), cy, w, Lines("1\n2\n3", w)) };
             card.Controls.Add(info);
             cy = info.Bottom + S(6);
+            string? buyError = null;
             void Show()
             {
-                string state = p.Problem ?? (p.Running ? L.T("plugins.running") : p.Unloading ? L.T("plugins.restart") : L.T("plugins.off"));
+                bool notOwned = p.Gated && p.Owned != true;
+                string state = p.Problem ?? buyError
+                    ?? (notOwned ? L.T(p.Owned == null ? "plugins.checking" : "plugins.notbought")
+                    : p.Running ? L.T("plugins.running") : p.Unloading ? L.T("plugins.restart") : L.T("plugins.off"));
                 info.Text = about.Length > 0 ? about + "\n" + state : state;
-                info.ForeColor = p.Problem != null ? Warn : Muted;
+                info.ForeColor = p.Problem != null || buyError != null ? Warn : Muted;
                 open.Visible = p.Running;
-                t.Enabled = p.Problem == null || t.On;   // a broken plugin can only be turned off
+                buy.Visible = p.Gated && p.Owned == false;
+                t.Enabled = (p.Problem == null && !notOwned) || t.On;   // broken or not bought: it can only be turned off
             }
+            buy.Click += async (_, _) =>
+            {
+                buy.Enabled = false;
+                buyError = await _plugins.BuyAsync(p, Handle) is { } e ? L.T("store.error", e) : null;
+                if (IsDisposed) return;
+                buy.Enabled = true;
+                t.On = _plugins.IsEnabled(p);
+                Show();
+            };
             t.Toggled += (_, _) => { _plugins.SetEnabled(p, t.On); Show(); };
             refresh.Add(Show);
             Show();
