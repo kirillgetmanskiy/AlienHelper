@@ -9,6 +9,7 @@ public sealed class SettingsForm : Form
 {
     readonly Controller _c;
     readonly OverlayManager _overlay;
+    readonly PluginManager _plugins;
     readonly Action<string> _setLanguage;
     readonly Func<IReadOnlyList<int>> _applyHotkeys;
     readonly Action _collectReport;
@@ -20,10 +21,10 @@ public sealed class SettingsForm : Form
     int Inner => S(W - 2 * M - 2 * Pad);
     int CardW => S(W - 2 * M);
 
-    public SettingsForm(Controller c, OverlayManager overlay, Action<string> setLanguage, Action showAbout,
+    public SettingsForm(Controller c, OverlayManager overlay, PluginManager plugins, Action<string> setLanguage, Action showAbout,
         Func<IReadOnlyList<int>> applyHotkeys, Action collectReport)
     {
-        _c = c; _overlay = overlay; _setLanguage = setLanguage; _applyHotkeys = applyHotkeys; _collectReport = collectReport;
+        _c = c; _overlay = overlay; _plugins = plugins; _setLanguage = setLanguage; _applyHotkeys = applyHotkeys; _collectReport = collectReport;
         Text = Log.AppTitle + " — " + L.T("settings");
         Style(this);
         FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -42,6 +43,7 @@ public sealed class SettingsForm : Form
         right = BuildHotkeys(right);
         right = BuildStartup(right);
         right = BuildDiagnostics(right);
+        right = BuildPlugins(right);
         int y = Math.Max(left, right);
         int width = S(2 * M) + 2 * CardW + S(Gap);
 
@@ -438,6 +440,81 @@ public sealed class SettingsForm : Form
         }
         cy += S(28) + S(6);
         return Finish(card, cy);
+    }
+
+    /// <summary>Plugins in the plugins folder: a switch each, with what it is and how it is doing.</summary>
+    int BuildPlugins(int y)
+    {
+        var card = NewCard(L.T("plugins.title"), y, out int cy);
+        var font = Theme.Font(8.5f);
+        int Lines(string text, int width) => TextRenderer.MeasureText(text, font, new Size(width, 0), TextFormatFlags.WordBreak).Height + S(2);
+        Label Note(string text, ref int cy, Color color)
+        {
+            var l = new Label { Text = text, ForeColor = color, Font = font, AutoSize = false };
+            l.Bounds = new Rectangle(S(Pad), cy, Inner, Lines(text, Inner));
+            card.Controls.Add(l);
+            cy = l.Bottom + S(6);
+            return l;
+        }
+        var refresh = new List<Action>();
+        if (_plugins.Plugins.Count == 0) Note(L.T("plugins.none"), ref cy, Muted);
+        foreach (var p in _plugins.Plugins)
+        {
+            var t = AddToggle(card, ref cy, new Toggle(p.Title) { On = _plugins.IsEnabled(p) });
+            var open = SmallButtonFor(L.T("plugins.settings"));
+            open.Location = new Point(S(Pad) + Inner - open.Width, cy);
+            open.Click += (_, _) => _plugins.OpenSettings(p, this);
+            card.Controls.Add(open);
+            // description and author, then the state; room for two lines of each
+            string about = string.Join(" · ", new[] { p.Manifest?.Description, p.Manifest?.Author }.Where(s => !string.IsNullOrWhiteSpace(s)));
+            int w = Inner - open.Width - S(6);
+            var info = new Label { Font = font, AutoSize = false, Bounds = new Rectangle(S(Pad), cy, w, Lines("1\n2\n3", w)) };
+            card.Controls.Add(info);
+            cy = info.Bottom + S(6);
+            void Show()
+            {
+                string state = p.Problem ?? (p.Running ? L.T("plugins.running") : p.Unloading ? L.T("plugins.restart") : L.T("plugins.off"));
+                info.Text = about.Length > 0 ? about + "\n" + state : state;
+                info.ForeColor = p.Problem != null ? Warn : Muted;
+                open.Visible = p.Running;
+                t.Enabled = p.Problem == null || t.On;   // a broken plugin can only be turned off
+            }
+            t.Toggled += (_, _) => { _plugins.SetEnabled(p, t.On); Show(); };
+            refresh.Add(Show);
+            Show();
+        }
+        void OnChanged() { if (!IsDisposed) foreach (var r in refresh) r(); }
+        _plugins.Changed += OnChanged;
+        FormClosed += (_, _) => _plugins.Changed -= OnChanged;
+        Note(L.T("plugins.hint"), ref cy, Muted);
+        var path = Note(PluginManager.Dir, ref cy, Blend(Muted, Fg, 0.5f));
+        path.Top -= S(4);
+        cy = path.Bottom + S(4);
+        int x = S(Pad), bw = (Inner - S(6)) / 2;
+        foreach (var (text, act) in new (string, Action)[]
+        {
+            (L.T("plugins.folder"), () =>
+            {
+                try { Directory.CreateDirectory(PluginManager.Dir); } catch { }   // under Program Files: needs admin rights
+                if (Directory.Exists(PluginManager.Dir)) System.Diagnostics.Process.Start("explorer.exe", PluginManager.Dir);
+            }),
+            (L.T("plugins.docs"), () => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Log.RepoUrl + "/blob/test/docs/plugins.md") { UseShellExecute = true })),
+        })
+        {
+            var b = new PillButton(text) { Bounds = new Rectangle(x, cy, bw, S(28)) };
+            b.Click += (_, _) => act();
+            card.Controls.Add(b);
+            x += b.Width + S(6);
+        }
+        cy += S(28) + S(6);
+        return Finish(card, cy);
+    }
+
+    static PillButton SmallButtonFor(string text)
+    {
+        var b = new PillButton(text) { Height = S(24) };
+        b.Width = TextRenderer.MeasureText(text, Theme.Font(9.5f)).Width + S(22);
+        return b;
     }
 
     void OnOverlayChanged()

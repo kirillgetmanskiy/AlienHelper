@@ -13,6 +13,9 @@ if (-not (Test-Path $dotnet)) { $dotnet = 'dotnet' }
     -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none -p:Channel=$Channel `
     -o "$PSScriptRoot\$Out"
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed ($LASTEXITCODE)" }
+# the plugin API for plugin authors (the exe has its own copy inside): <out>\sdk
+& $dotnet build "$PSScriptRoot\src\AlienHelper.PluginApi\AlienHelper.PluginApi.csproj" -c Release -o "$PSScriptRoot\$Out\sdk" --nologo -v q
+if ($LASTEXITCODE -ne 0) { throw "building the plugin API failed ($LASTEXITCODE)" }
 # ship the license notices next to the exe
 Copy-Item "$PSScriptRoot\THIRD-PARTY-NOTICES.txt" "$PSScriptRoot\$Out\" -Force
 New-Item -ItemType Directory -Force "$PSScriptRoot\$Out\licenses" | Out-Null

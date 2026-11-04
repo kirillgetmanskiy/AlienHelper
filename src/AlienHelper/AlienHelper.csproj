@@ -26,6 +26,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- what plugins build against; bundled into the exe and shared with every plugin (Plugins.cs) -->
+    <ProjectReference Include="..\AlienHelper.PluginApi\AlienHelper.PluginApi.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="Assets\app.ico" LogicalName="AlienHelper.app.ico" />
     <EmbeddedResource Include="Assets\IntelMSR.bin" LogicalName="AlienHelper.IntelMSR.bin" />
   </ItemGroup>

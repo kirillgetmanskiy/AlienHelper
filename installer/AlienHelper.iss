@@ -85,6 +85,10 @@ ja.GetPawnIO=PawnIO のページを開く (コアごとの温度と総消費電�
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
+[Dirs]
+; plugins (Plugins.cs): only an installer running as administrator puts files here; left in place on uninstall when not empty
+Name: "{app}\Plugins"
+
 [Files]
 Source: "app\{#AppExe}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion

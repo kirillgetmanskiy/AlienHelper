@@ -455,7 +455,8 @@ static class Program
         mon.FakeGpus = fakeGpus; mon.FakeDrives = fakeDisks;   // layout checks for machines with more GPUs / drives
         using var overlay = new OverlayManager(c, mon);
         var main = new MainForm(c, mon, () => { });
-        var settings = new SettingsForm(c, overlay, _ => { }, () => { }, () => Array.Empty<int>(), () => { });
+        using var plugins = new PluginManager(c.S, main, (_, _) => { });   // lists nothing: screenshots load no plugin
+        var settings = new SettingsForm(c, overlay, plugins, _ => { }, () => { }, () => Array.Empty<int>(), () => { });
         if (!lite) settings.Show();
         var charts = new ChartsForm(c, mon);
         using var frames = new FrameMonitor();
