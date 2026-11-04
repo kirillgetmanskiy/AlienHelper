@@ -84,6 +84,10 @@ public sealed class Recorder : IPlugin
 }
 ```
 
+The app shares its own copies of `AlienHelper.PluginApi`, `WinRT.Runtime` and `Microsoft.Windows.SDK.NET` with every
+plugin: two WinRT runtimes in one process would fight over the same COM objects. A plugin that uses Windows APIs
+targets `net8.0-windows10.0.22621.0` or older and need not ship those two files.
+
 What `IPluginHost` gives (see `src\AlienHelper.PluginApi\PluginApi.cs`):
 
 | | |
@@ -143,7 +147,15 @@ downloads and installs the add-on's package, and the plugin is turned on at once
 add-ons only, never from the plugins folder: the Store does not allow adding code to an app from outside it (policy
 10.2.2). The builds from the Setup.exe have no Store: they load the folder and do not show the button.
 
-An add-on is a *durable with a package*: its package is an MSIX **optional package** of Alien Helper. Windows installs
+**For now: inside the app's package.** Optional packages need Microsoft's permission. Until it comes, a paid plugin
+ships inside the app's Store package as `Plugins\<id>` (`installer\build-msix.ps1 -Plugins <folder>`; by default
+VideoCap's `..\AlienHelper-VideoCap\publish\store-bundle`). Its add-on is a plain *durable without a package*: a
+license only. The Store build loads such a plugin only while `StoreContext.GetAppLicenseAsync()` shows an active
+license for the `storeId` in its plugin.json. Otherwise **Settings → Plugins** shows it as not bought, with **Buy**.
+After the purchase it turns on at once, with nothing to download, and a refund stops it. Each plugin update then
+ships with an update of the app.
+
+**Later: an optional package.** An add-on is then a *durable with a package*: its package is an MSIX **optional package** of Alien Helper. Windows installs
 it under `C:\Program Files\WindowsApps\`, where only the system can write, so it passes the same check as the plugins
 folder. The app loads optional packages of its own publisher only.
 
@@ -202,7 +214,9 @@ folder. The app loads optional packages of its own publisher only.
 
 Платный плагин можно продавать как дополнение (add-on) Alien Helper в Microsoft Store. В Store-версии программы есть
 кнопка «Настройки → Плагины → Дополнения в Microsoft Store»: там видны цены, а «Купить» открывает окно покупки Store.
-После покупки Store сам скачивает и ставит пакет дополнения, и плагин сразу включается. Store-версия загружает плагины только из
+После покупки Store сам скачивает и ставит пакет дополнения, и плагин сразу включается. Пока разрешения Microsoft на
+optional packages нет, платный плагин лежит внутри пакета самой программы (`Plugins\<id>`), а дополнение — только
+лицензия: без покупки плагин виден в «Настройки → Плагины» как «Не куплено» с кнопкой «Купить». Store-версия загружает плагины только из
 таких дополнений, папка плагинов в ней не используется (правило Store 10.2.2). Дополнение — это *durable с
 пакетом*, необязательный (optional) MSIX-пакет Alien Helper. Для него нужно разрешение Microsoft на optional packages.
 Шаги и пример манифеста — в английской части выше («Selling a plugin as a Microsoft Store add-on»).

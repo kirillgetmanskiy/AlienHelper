@@ -2,8 +2,9 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <!-- the Windows SDK projection: Microsoft Store add-ons and optional packages (StoreAddons.cs) -->
-    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <!-- the Windows SDK projection: Microsoft Store add-ons (StoreAddons.cs). Plugins share it and WinRT.Runtime with
+         the app (PluginLoadContext), so it is the newest one a plugin may build against: 10.0.22621 -->
+    <TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
     <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>

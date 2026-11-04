@@ -62,7 +62,8 @@ public sealed class StoreAddonsForm : Form
     void AddRow(StoreAddon a)
     {
         int top = _y;
-        bool installed = _plugins.Plugins.Any(p => p.FromStore && p.Manifest?.StoreId is { } id && id.Equals(a.StoreId, StringComparison.OrdinalIgnoreCase));
+        var plugin = _plugins.Plugins.FirstOrDefault(p => p.FromStore && p.Manifest?.StoreId is { } id && id.Equals(a.StoreId, StringComparison.OrdinalIgnoreCase));
+        bool installed = plugin != null && (!plugin.Gated || a.Owned);
         var button = new PillButton(installed ? L.T("store.installed") : a.Owned ? L.T("store.install") : L.T("store.buy", a.Price))
             { Height = S(30), Active = !installed, Enabled = !installed };
         button.Width = TextRenderer.MeasureText(button.Text, _font).Width + S(36);
@@ -77,8 +78,10 @@ public sealed class StoreAddonsForm : Form
         {
             button.Enabled = false;
             state.Text = L.T("store.wait");
-            var (bought, error) = await StoreAddons.BuyAndInstallAsync(a.StoreId, Handle);
+            // in the app's package already: only the license; otherwise the Store installs the add-on's package
+            var (bought, error) = plugin != null ? (true, await _plugins.BuyAsync(plugin, Handle)) : await StoreAddons.BuyAndInstallAsync(a.StoreId, Handle);
             if (IsDisposed) return;
+            if (plugin != null && error == null && plugin.Owned != true) bought = false;   // the dialog was closed
             if (error == null && bought)
             {
                 // just bought: on at once, as if turned on in Settings
