@@ -106,7 +106,8 @@ public static class Autostart
         catch { return null; }
     }
 
-    static bool IsPackaged()
+    /// <summary>Runs from an MSIX package (the Store build).</summary>
+    public static bool IsPackaged()
     {
         int len = 0;
         return GetCurrentPackageFullName(ref len, null) != AppModelErrorNoPackage;

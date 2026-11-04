@@ -10,7 +10,8 @@ using AlienHelper.UI;
 namespace AlienHelper;
 
 /// <summary>A plugin's plugin.json.</summary>
-public sealed record PluginManifest(string Id, string Name, string Version, string? Author, string? Description, string Assembly, int Api);
+/// <param name="StoreId">The Microsoft Store add-on it is sold as, if any (e.g. "9NBLGGH4R315").</param>
+public sealed record PluginManifest(string Id, string Name, string Version, string? Author, string? Description, string Assembly, int Api, string? StoreId = null);
 
 /// <summary>A plugin found in the plugins folder: loaded only once the user turned it on.</summary>
 public sealed class PluginEntry
@@ -24,6 +25,8 @@ public sealed class PluginEntry
     public bool Running => Host != null;
     /// <summary>Stopped this session: its code stays loaded until the app restarts.</summary>
     public bool Unloading { get; internal set; }
+    /// <summary>Installed from the Microsoft Store as an add-on (an optional package of the app).</summary>
+    public bool FromStore { get; init; }
     public string Id => Manifest?.Id ?? Path.GetFileName(Folder);
     public string Title => Manifest is { } m ? $"{m.Name} {m.Version}" : Path.GetFileName(Folder);
 }
@@ -67,21 +70,40 @@ public sealed class PluginManager : IDisposable
     void Discover()
     {
         _plugins.Clear();
-        if (!Directory.Exists(Dir)) return;
-        string? unsafeRoot = Unsafe(Path.GetDirectoryName(Dir)!, recurse: false) ?? Unsafe(Dir, recurse: false);
-        foreach (var folder in Directory.GetDirectories(Dir).OrderBy(d => d, StringComparer.OrdinalIgnoreCase))
+        if (Directory.Exists(Dir))
         {
-            PluginManifest? m = null;
-            string? problem;
-            try { m = ReadManifest(folder, out problem); }
-            catch (Exception ex) { problem = ex.Message; }
-            problem = (unsafeRoot ?? Unsafe(folder, recurse: true)) ?? problem;   // the folder's rights come first
-            if (problem == null && m!.Api != PluginApi.Version) problem = L.T("plugins.api", m.Api, PluginApi.Version);
-            var p = new PluginEntry { Folder = folder, Manifest = m, Problem = problem };
-            if (problem != null) Log.Warn($"plugin {p.Id}: {problem}");
-            _plugins.Add(p);
+            string? unsafeRoot = Unsafe(Path.GetDirectoryName(Dir)!, recurse: false) ?? Unsafe(Dir, recurse: false);
+            foreach (var folder in Directory.GetDirectories(Dir).OrderBy(d => d, StringComparer.OrdinalIgnoreCase))
+                Add(folder, unsafeRoot, store: false);
         }
-        Log.Info($"plugins: {_plugins.Count} in {Dir}");
+        foreach (var folder in StoreAddons.PackageFolders()) Add(folder, null, store: true);
+        Log.Info($"plugins: {_plugins.Count} in {Dir} and the Store's add-ons");
+    }
+
+    /// <summary>Looks again for Store add-ons (one was just installed): the new ones, the ones turned on started.</summary>
+    public List<PluginEntry> Rescan()
+    {
+        var added = StoreAddons.PackageFolders()
+            .Where(f => !_plugins.Any(p => p.Folder.Equals(f, StringComparison.OrdinalIgnoreCase)))
+            .Select(f => Add(f, null, store: true)).ToList();
+        foreach (var p in added.Where(IsEnabled)) Load(p);
+        if (added.Count > 0) Changed?.Invoke();
+        return added;
+    }
+
+    PluginEntry Add(string folder, string? unsafeRoot, bool store)
+    {
+        PluginManifest? m = null;
+        string? problem;
+        try { m = ReadManifest(folder, out problem); }
+        catch (Exception ex) { problem = ex.Message; }
+        problem = (unsafeRoot ?? Unsafe(folder, recurse: true)) ?? problem;   // the folder's rights come first
+        if (problem == null && m!.Api != PluginApi.Version) problem = L.T("plugins.api", m.Api, PluginApi.Version);
+        if (problem == null && _plugins.Any(x => x.Id.Equals(m!.Id, StringComparison.OrdinalIgnoreCase))) problem = L.T("plugins.duplicate");
+        var p = new PluginEntry { Folder = folder, Manifest = m, Problem = problem, FromStore = store };
+        if (problem != null) Log.Warn($"plugin {p.Id}: {problem}");
+        _plugins.Add(p);
+        return p;
     }
 
     static PluginManifest? ReadManifest(string folder, out string? problem)

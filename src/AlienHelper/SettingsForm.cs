@@ -497,6 +497,12 @@ public sealed class SettingsForm : Form
             if (Directory.Exists(PluginManager.Dir)) System.Diagnostics.Process.Start("explorer.exe", PluginManager.Dir);
         };
         card.Controls.Add(folder);
+        if (StoreAddons.Available)   // the Store build: plugins sold as add-ons
+        {
+            var store = new PillButton(L.T("store.title")) { Bounds = new Rectangle(folder.Right + S(6), cy, folder.Width, S(28)) };
+            store.Click += (_, _) => new StoreAddonsForm(_plugins).Show(this);
+            card.Controls.Add(store);
+        }
         cy += S(28) + S(6);
         return Finish(card, cy);
     }

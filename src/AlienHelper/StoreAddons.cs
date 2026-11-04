@@ -1,0 +1,83 @@
+using System.Runtime.InteropServices;
+using Windows.Services.Store;
+
+namespace AlienHelper;
+
+/// <summary>A paid plugin sold as an add-on of the app in the Microsoft Store.</summary>
+public sealed record StoreAddon(string StoreId, string Title, string Description, string Price, bool Owned);
+
+/// <summary>
+/// Plugins sold as Microsoft Store add-ons (durables with a package): buying one installs its optional package, which
+/// <see cref="PluginManager"/> then loads like a plugin from the plugins folder. Only in the Store build: without
+/// package identity there is no Store to buy from.
+/// </summary>
+public static class StoreAddons
+{
+    public static bool Available => Autostart.IsPackaged();
+
+    static StoreContext? _ctx;
+
+    /// <summary>The Store's dialogs belong to this window (a desktop app has to say which).</summary>
+    static StoreContext Context(IntPtr owner)
+    {
+        _ctx ??= StoreContext.GetDefault();
+        if (owner != IntPtr.Zero) WinRT.Interop.InitializeWithWindow.Initialize(_ctx, owner);
+        return _ctx;
+    }
+
+    /// <summary>The app's add-ons with their prices; empty outside the Store build or when the Store cannot be reached.</summary>
+    public static async Task<(List<StoreAddon> list, string? error)> ListAsync(IntPtr owner)
+    {
+        if (!Available) return (new(), null);
+        try
+        {
+            var r = await Context(owner).GetAssociatedStoreProductsAsync(new[] { "Durable" });
+            if (r.ExtendedError != null) return (new(), r.ExtendedError.Message);
+            var list = r.Products.Values
+                .Select(p => new StoreAddon(p.StoreId, p.Title, p.Description, p.Price.FormattedPrice, p.IsInUserCollection))
+                .OrderBy(a => a.Title, StringComparer.CurrentCultureIgnoreCase).ToList();
+            return (list, null);
+        }
+        catch (Exception ex) { Log.Error("store: add-ons", ex); return (new(), ex.Message); }
+    }
+
+    /// <summary>
+    /// Buys the add-on (the Store's own purchase dialog) unless already owned, then downloads and installs its package.
+    /// Null when installed; otherwise why not. False in <paramref name="bought"/> when the user closed the dialog.
+    /// </summary>
+    public static async Task<(bool bought, string? error)> BuyAndInstallAsync(string storeId, IntPtr owner)
+    {
+        try
+        {
+            var ctx = Context(owner);
+            var p = await ctx.RequestPurchaseAsync(storeId);
+            if (p.ExtendedError != null) return (false, p.ExtendedError.Message);
+            if (p.Status is StorePurchaseStatus.NotPurchased) return (false, null);
+            if (p.Status is not (StorePurchaseStatus.Succeeded or StorePurchaseStatus.AlreadyPurchased)) return (false, p.Status.ToString());
+            Log.Info($"store: add-on {storeId} {p.Status}");
+            var install = await ctx.RequestDownloadAndInstallStorePackagesAsync(new[] { storeId });
+            if (install.OverallState != StorePackageUpdateState.Completed) return (true, install.OverallState.ToString());
+            Log.Info($"store: add-on {storeId} installed");
+            return (true, null);
+        }
+        catch (Exception ex) { Log.Error($"store: buying {storeId}", ex); return (false, ex.Message); }
+    }
+
+    /// <summary>
+    /// The folders of the app's installed optional packages (add-ons with a package), each one plugin with its
+    /// plugin.json at the root. Only those of the app's own publisher: the Store lets nobody else make them.
+    /// </summary>
+    public static IEnumerable<string> PackageFolders()
+    {
+        if (!Available) return Array.Empty<string>();
+        try
+        {
+            var me = Windows.ApplicationModel.Package.Current;
+            return me.Dependencies
+                .Where(d => d.IsOptional && d.Id.PublisherId == me.Id.PublisherId)
+                .Select(d => d.InstalledLocation.Path)
+                .ToList();
+        }
+        catch (Exception ex) { Log.Error("store: optional packages", ex); return Array.Empty<string>(); }
+    }
+}
