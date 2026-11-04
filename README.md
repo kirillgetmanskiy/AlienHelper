@@ -162,6 +162,10 @@ Alien Helper is free and open source. If it is useful to you, you can support it
     temperatures, power, VRAM, RAM over 2 minutes.
   - "Response time" here means frame time. True input latency (as in NVIDIA Reflex) cannot be measured without support in the game itself.
 - `AlienHelper.exe --fpstest out.txt` — a 6-second measurement of Present events per process (read-only).
+- **Plugins**: separate products (screen and sound recording, for example) that run inside the app: their own tray
+  menu, settings, hotkeys and items in the overlay. They load only from `%ProgramFiles%\AlienHelper\Plugins`, which
+  only administrators can change, and only once turned on in **Settings** → **Plugins**. How to make one:
+  [docs/plugins.md](docs/plugins.md).
 
 ## Running
 
