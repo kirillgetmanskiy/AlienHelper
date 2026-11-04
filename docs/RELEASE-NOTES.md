@@ -2,6 +2,25 @@
 
 **English** | [Русский](#что-нового)
 
+## 0.1.24
+
+- **A bought add-on now turns on.** In 0.1.23 Alien Helper did not see that an add-on without a package (such as
+  VideoCap) was bought, so the plugin stayed "Not bought". The app now also checks the add-ons in your Microsoft
+  account. A plugin you bought turns on by itself the first time the app sees it. If the Store is unreachable, the app
+  checks again a minute later.
+
+### Microsoft Store: "What's new in this version" (en-us)
+
+```
+• Fixed: a bought add-on (Alien Helper VideoCap) stayed "Not bought". It now turns on by itself after the update.
+```
+
+### Microsoft Store: "Notes for certification"
+
+```
+Fix of 0.1.23: the license-only durable add-on AlienHelperVideoCap (Store ID 9NPBGN51VF76) is not listed in StoreContext.GetAppLicenseAsync().AddOnLicenses, so the bundled plugin (Pluginsideocap) did not load after purchase. The app now also reads StoreContext.GetUserCollectionAsync(["Durable"]) and loads the plugin when the add-on is in the user's collection. To test: buy the add-on in Settings → Plugins, then use the tray menu → Alien Helper VideoCap → Start recording. No new capabilities.
+```
+
 ## 0.1.23
 
 - **Alien Helper VideoCap.** VideoCap is the first paid plugin: screen and sound recording in games and on the
@@ -56,6 +75,19 @@ This update adds plugin support and the first paid plugin, Alien Helper VideoCap
 # Что нового
 
 [English](#release-notes) | **Русский**
+
+## 0.1.24
+
+- **Купленное дополнение теперь включается.** В 0.1.23 программа не видела покупку дополнения без пакета (например
+  VideoCap), и плагин оставался «Не куплено». Теперь программа проверяет ещё и дополнения в вашей учётной записи
+  Microsoft. Купленный плагин включается сам, как только программа увидит покупку. Если Store недоступен, проверка
+  повторится через минуту.
+
+### Microsoft Store: «Новые возможности этой версии» (ru-ru)
+
+```
+• Исправлено: купленное дополнение (Alien Helper VideoCap) оставалось «Не куплено». После обновления оно включится само.
+```
 
 ## 0.1.23
 
