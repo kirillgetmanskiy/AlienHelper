@@ -2,9 +2,16 @@
 
 **English** | [Русский](#что-нового)
 
+## 0.1.22
+
+The package now declares borderless screen capture (`graphicsCaptureWithoutBorder`) and the microphone. Plugins
+run inside the app, so a screen-recording add-on needs these to capture without the yellow border (once the user
+allows it) and to record the microphone. The app itself does not record anything.
+
 ## 0.1.21
 
-For the Microsoft Store, this release follows 0.1.17. Everything since then:
+For the Microsoft Store, 0.1.22 follows 0.1.17, so the Store text below covers 0.1.21 and 0.1.22. Everything since
+0.1.17:
 
 - **Plugins.** Plugins are separate products that run inside Alien Helper, for example screen and sound recording.
   Each gets its own tray submenu, a settings window, hotkeys, notifications and items in the overlay. A plugin is off
@@ -33,7 +40,7 @@ For the Microsoft Store, this release follows 0.1.17. Everything since then:
 ### Microsoft Store: "Notes for certification"
 
 ```
-This update adds plugin support. Plugins are sold only as durable add-ons of this app in the Microsoft Store. Each is an optional package (MSIX) of this app, from the same publisher. Settings → Plugins → "Add-ons in the Microsoft Store" lists them through Windows.Services.Store. Buying one calls RequestPurchaseAsync and then RequestDownloadAndInstallStorePackagesAsync. The app loads plugin code only from its own optional packages installed by the Store. It never downloads code itself and never loads plugins from any other location in the Store version. No add-ons are published yet, so the list is empty. The restricted capabilities (runFullTrust, allowElevation) are unchanged from the previous submission.
+This update adds plugin support. Plugins are sold only as durable add-ons of this app in the Microsoft Store. Each is an optional package (MSIX) of this app, from the same publisher. Settings → Plugins → "Add-ons in the Microsoft Store" lists them through Windows.Services.Store. Buying one calls RequestPurchaseAsync and then RequestDownloadAndInstallStorePackagesAsync. The app loads plugin code only from its own optional packages installed by the Store. It never downloads code itself and never loads plugins from any other location in the Store version. No add-ons are published yet, so the list is empty. The restricted capabilities (runFullTrust, allowElevation) are unchanged from the previous submission. New general-use capabilities: graphicsCaptureWithoutBorder and microphone (device capability). They are for a screen and sound recording plugin sold as an add-on, which runs inside the app; Windows still asks the user before borderless capture and microphone access. Alien Helper itself records nothing.
 ```
 
 ---
@@ -42,9 +49,16 @@ This update adds plugin support. Plugins are sold only as durable add-ons of thi
 
 [English](#release-notes) | **Русский**
 
+## 0.1.22
+
+Пакет теперь объявляет захват экрана без рамки (`graphicsCaptureWithoutBorder`) и микрофон. Плагины работают внутри
+программы, поэтому дополнению для записи экрана это нужно, чтобы снимать без жёлтой рамки (после разрешения
+пользователя) и записывать микрофон. Сама программа ничего не записывает.
+
 ## 0.1.21
 
-В Microsoft Store эта версия выходит после 0.1.17. Всё, что изменилось с тех пор:
+В Microsoft Store после 0.1.17 выходит 0.1.22, поэтому текст для Store ниже охватывает 0.1.21 и 0.1.22. Всё, что
+изменилось после 0.1.17:
 
 - **Плагины.** Плагины — отдельные продукты, которые работают внутри Alien Helper, например запись экрана и звука.
   У плагина бывает своё меню в трее, окно настроек, горячие клавиши, уведомления и строки в оверлее. Плагин выключен,
