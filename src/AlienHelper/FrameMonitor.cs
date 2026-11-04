@@ -14,7 +14,7 @@ public sealed class FrameMonitor : IDisposable
 {
     static readonly Guid Dxgi = new("CA11C036-0102-4A2D-A6AD-F03CFED5D3C9");
     static readonly Guid D3D9 = new("783ACA0A-790E-4D7F-8451-AA850511C6B9");
-    const string SessionName = "AlienHelper-Frames";
+    const string SessionName = AppId.Key + "-Frames";
     const double WindowMs = 1000;
 
     public sealed record Stats(int Pid, string Process, double Fps, double FrameMs, double Low1Fps, IReadOnlyList<float> FrameTimes);

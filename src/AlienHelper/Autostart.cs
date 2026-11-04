@@ -9,12 +9,13 @@ namespace AlienHelper;
 /// a UAC prompt. Both are created only when the user switches the matching option on in the main window:
 ///  - "AlienHelper"        logon trigger, starts in the tray (autostart);
 ///  - "AlienHelper-NoUAC"  no trigger, started on demand by a non-elevated launch of the exe.
+/// The test build's are "AlienHelperTest" and "AlienHelperTest-NoUAC" (<see cref="AppId.Key"/>).
 /// No service is installed; turning an option off deletes its task.
 /// </summary>
 public static class Autostart
 {
-    public const string LogonTask = "AlienHelper";
-    public const string LaunchTask = "AlienHelper-NoUAC";
+    public const string LogonTask = AppId.Key;
+    public const string LaunchTask = AppId.Key + "-NoUAC";
 
     public static bool IsEnabled() => Exists(LogonTask);
     public static bool Enable() => Create(LogonTask, logon: true);
@@ -45,7 +46,7 @@ public static class Autostart
         string xml = $"""
             <?xml version="1.0" encoding="UTF-16"?>
             <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
-              <RegistrationInfo><Description>AlienHelper: {(logon ? "start in tray at logon" : "start without a UAC prompt")}</Description></RegistrationInfo>
+              <RegistrationInfo><Description>{AppId.Title}: {(logon ? "start in tray at logon" : "start without a UAC prompt")}</Description></RegistrationInfo>
               <Triggers>{trigger}</Triggers>
               <Principals>
                 <Principal id="Author"><UserId>{SecurityElement.Escape(user)}</UserId><LogonType>InteractiveToken</LogonType><RunLevel>HighestAvailable</RunLevel></Principal>
@@ -78,18 +79,18 @@ public static class Autostart
     {
         if (!IsPackaged()) return InstalledExe() ?? Environment.ProcessPath!;
         return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Microsoft", "WindowsApps", "AlienHelper.exe");
+            "Microsoft", "WindowsApps", AppId.Exe);
     }
 
     /// <summary>The exe under the installer's folder, or null when the app is not installed or the file is gone.</summary>
     static string? InstalledExe()
     {
-        const string key = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\{6F3C2B1E-8A47-4D5C-9E21-A1E7F0B4C3D9}_is1";
+        const string key = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\" + AppId.InstallerGuid + "_is1";
         try
         {
             using var k = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(key);
             if (k?.GetValue("InstallLocation") is not string dir) return null;
-            string exe = Path.Combine(dir, "AlienHelper.exe");
+            string exe = Path.Combine(dir, AppId.Exe);
             return File.Exists(exe) ? exe : null;
         }
         catch { return null; }

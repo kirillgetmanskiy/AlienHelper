@@ -5,9 +5,13 @@
 # The Store signs the package itself, so -SignCmd is only for sideloading; $f stands for the file and the
 # certificate subject must equal Identity/@Publisher in Package.appxmanifest, e.g.
 #   -SignCmd 'signtool.exe sign /fd sha256 /f my.pfx /p <password> $f'
-param([string]$SignCmd)
+#
+# -Channel prod|test: by default test on the test branches (see channel.ps1). The test package has its own identity
+# (35916LobsterSoft.AlienHelperTest, "Alien Helper Test"), so it is for sideloading only and has to be signed.
+param([string]$SignCmd, [string]$Channel)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot
+. "$root\channel.ps1"
 $msix = "$PSScriptRoot\msix"
 
 $makeappx = @(
@@ -23,7 +27,7 @@ if (-not $makeappx) {
         Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
 }
 
-& "$root\build.ps1" -Out 'installer\app'
+& "$root\build.ps1" -Out 'installer\app' -Channel $Channel
 
 # MSIX versions have four parts
 $version = ([xml](Get-Content "$root\src\AlienHelper\AlienHelper.csproj")).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
@@ -32,14 +36,16 @@ $msixVersion = (($version.Split('.') + @('0', '0', '0', '0'))[0..3]) -join '.'
 $layout = "$msix\layout"
 if (Test-Path $layout) { Remove-Item -Recurse -Force $layout }
 New-Item -ItemType Directory -Force "$layout\Assets" | Out-Null
-Copy-Item "$PSScriptRoot\app\AlienHelper.exe" $layout
+Copy-Item "$PSScriptRoot\app\$AppKey.exe" $layout
 Copy-Item "$root\src\AlienHelper\Assets\Msix\*.png" "$layout\Assets"
 Copy-Item "$root\LICENSE" "$layout\LICENSE.txt"
 Copy-Item "$root\NOTICE.md" "$layout\NOTICE.txt"
 Copy-Item "$PSScriptRoot\app\THIRD-PARTY-NOTICES.txt" $layout
 Copy-Item "$PSScriptRoot\app\licenses" $layout -Recurse
-(Get-Content "$msix\Package.appxmanifest" -Raw).Replace('$VERSION$', $msixVersion) |
-    Set-Content "$layout\AppxManifest.xml" -Encoding UTF8
+$manifest = (Get-Content "$msix\Package.appxmanifest" -Raw).Replace('$VERSION$', $msixVersion)
+# the test package: every AlienHelper name (identity, app id, exe, alias, startup task) and the shown name get "Test"
+if ($Channel -eq 'test') { $manifest = $manifest.Replace('AlienHelper', 'AlienHelperTest').Replace('Alien Helper', 'Alien Helper Test') }
+$manifest | Set-Content "$layout\AppxManifest.xml" -Encoding UTF8
 
 # resources.pri: without it Windows ignores the size-specific logos (Assets\*.targetsize-*.png) and draws the 44 px one
 # on a plate in the taskbar
@@ -52,12 +58,12 @@ if ($LASTEXITCODE -ne 0) { throw "makepri new failed ($LASTEXITCODE)" }
 Remove-Item $priConfig
 
 if ($SignCmd) {
-    & cmd.exe /c $SignCmd.Replace('$f', "`"$layout\AlienHelper.exe`"")
+    & cmd.exe /c $SignCmd.Replace('$f', "`"$layout\$AppKey.exe`"")
     if ($LASTEXITCODE -ne 0) { throw "signing AlienHelper.exe failed ($LASTEXITCODE)" }
 }
 
 New-Item -ItemType Directory -Force "$PSScriptRoot\Output" | Out-Null
-$out = "$PSScriptRoot\Output\AlienHelper-$version.msix"
+$out = "$PSScriptRoot\Output\$AppKey-$version.msix"
 & $makeappx pack /o /d $layout /p $out
 if ($LASTEXITCODE -ne 0) { throw "makeappx failed ($LASTEXITCODE)" }
 

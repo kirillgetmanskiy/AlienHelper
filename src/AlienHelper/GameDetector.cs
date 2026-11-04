@@ -20,7 +20,7 @@ public static class GameDetector
     internal static readonly HashSet<string> NotGames = new(StringComparer.OrdinalIgnoreCase)
     {
         "explorer", "chrome", "msedge", "firefox", "opera", "brave", "vivaldi", "vlc", "mpc-hc64", "mpc-be64",
-        "PotPlayerMini64", "Video.UI", "Microsoft.Media.Player", "POWERPNT", "AlienHelper", "ApplicationFrameHost",
+        "PotPlayerMini64", "Video.UI", "Microsoft.Media.Player", "POWERPNT", "AlienHelper", "AlienHelperTest", "ApplicationFrameHost",
         "ShellExperienceHost", "SearchHost", "StartMenuExperienceHost", "LockApp",
         // launchers live next to their games but are not games
         "steam", "steamwebhelper", "EpicGamesLauncher", "EpicWebHelper", "GalaxyClient", "EADesktop", "EALauncher",

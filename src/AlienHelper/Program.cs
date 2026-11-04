@@ -31,12 +31,15 @@ static class Program
         if (args.Length >= 2 && args[0] == "--psys") return PsysTest(args[1]);
         if (args.Length >= 2 && args[0] == "--gpuclocks") return GpuClocksDump(args[1], args.Skip(2).ToArray());
 
-        using var mutex = new Mutex(true, "AlienHelper.SingleInstance", out bool first);
+        using var mutex = new Mutex(true, AppId.Key + ".SingleInstance", out bool first);
         if (!first && args.FirstOrDefault() is not ("--screenshot" or "--overlaytest"))
         {
             if (!args.Contains("--tray")) ShowSignal.TrySignal();
             return 0;
         }
+        // the prod and the test build must not drive the hardware at the same time
+        if (args.FirstOrDefault() is not ("--screenshot" or "--overlaytest") && !AppId.TakeOver(args.Contains("--tray"))) return 0;
+        AppId.SeedSettings();
 
         ApplicationConfiguration.Initialize();
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
@@ -57,7 +60,7 @@ static class Program
         }
         if (args.Length >= 2 && args[0] == "--overlaytest") return OverlayTest(args[1]);
         Log.Cleanup();
-        Log.Info($"AlienHelper {typeof(Program).Assembly.GetName().Version} starting, args='{string.Join(' ', args)}', os={Environment.OSVersion.VersionString}");
+        Log.Info($"{AppId.Key} {typeof(Program).Assembly.GetName().Version} starting, args='{string.Join(' ', args)}', os={Environment.OSVersion.VersionString}");
         Application.Run(new TrayApp(showWindow: !args.Contains("--tray")));
         return 0;
     }
