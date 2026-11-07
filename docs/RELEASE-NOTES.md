@@ -2,6 +2,32 @@
 
 **English** | [Русский](#что-нового)
 
+## 0.1.26
+
+- **Emergency mode.** When the GPU overheats, the app switches to Balanced (the GPU gets up to 80 W) and runs the fans
+  at full speed until the GPU cools down, then returns to the previous mode. It also starts when the laptop cuts the
+  GPU power on its own right after running hot. You cannot pick it by hand; a notification says when it starts and
+  ends. A mode you choose meanwhile comes on after it. **Settings → Emergency mode** turns it on or off and sets the
+  start (87 °C) and end (72 °C) temperatures.
+- **The boost key (F6) no longer blinks.** In Alien Mode, with the fans at 100 % and in the emergency mode the laptop
+  lights F6 itself. Keyboard colors and effects now leave that key alone.
+
+### Microsoft Store: "What's new in this version" (en-us)
+
+0.1.25 was not submitted to the Store on its own, so this covers both:
+
+```
+• Emergency mode: when the GPU overheats, the app switches to Balanced and runs the fans at full speed until it cools down, then returns to your mode. Settings → Emergency mode sets the temperatures or turns it off.
+• The boost key (F6) no longer blinks while keyboard effects run.
+• More detailed diagnostics in the log when the GPU power limit changes.
+```
+
+### Microsoft Store: "Notes for certification"
+
+```
+New: an emergency mode. When the NVIDIA GPU stays at or above a set temperature (87 °C by default), or the laptop cuts the GPU power right after running hot, the app switches the Dell thermal profile to Balanced and sets the fans to 100 % through the same AWCC WMI interface it already uses, shows a notification, and returns to the previous profile once the GPU has cooled down (72 °C by default). It can be turned off in Settings → Emergency mode. Keyboard lighting effects no longer repaint the boost key's LED while the firmware shows the boost on it. No new capabilities. The add-on AlienHelperVideoCap (9NPBGN51VF76) works as in 0.1.24: buy it in Settings → Plugins, then tray menu → Alien Helper VideoCap → Start recording.
+```
+
 ## 0.1.25
 
 - **Diagnostics for the GPU power limit.** In Alien Mode the GPU sometimes drops to 80 W under load. When the limit
@@ -93,6 +119,26 @@ This update adds plugin support and the first paid plugin, Alien Helper VideoCap
 # Что нового
 
 [English](#release-notes) | **Русский**
+
+## 0.1.26
+
+- **Аварийный режим.** Когда видеокарта перегревается, программа включает Balanced (видеокарте до 80 Вт) и
+  вентиляторы на полную, пока видеокарта не остынет, а потом возвращает прежний режим. Он включается и тогда, когда
+  ноутбук сам урезает мощность видеокарты сразу после нагрева. Вручную его выбрать нельзя; о включении и выключении
+  сообщает уведомление. Режим, выбранный в это время, включится после него. В «Настройки → Аварийный режим» его можно
+  выключить и задать температуры включения (87 °C) и выключения (72 °C).
+- **Клавиша буста (F6) больше не мигает.** В Alien Mode, при вентиляторах на 100 % и в аварийном режиме ноутбук сам
+  подсвечивает F6. Цвета и эффекты клавиатуры теперь эту клавишу не трогают.
+
+### Microsoft Store: «Новые возможности этой версии» (ru-ru)
+
+0.1.25 в Store отдельно не отправлялась, поэтому текст охватывает обе версии:
+
+```
+• Аварийный режим: при перегреве видеокарты программа включает Balanced и вентиляторы на полную, пока она не остынет, а затем возвращает ваш режим. Температуры и выключение — в «Настройки → Аварийный режим».
+• Клавиша буста (F6) больше не мигает при эффектах клавиатуры.
+• Подробная диагностика в логе при смене лимита мощности видеокарты.
+```
 
 ## 0.1.25
 
