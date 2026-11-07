@@ -19,7 +19,7 @@ Alien Helper is free and open source. If it is useful to you, you can support it
 
 ## Features
 
-- Modes: Balanced, Balanced Performance, Cool, Quiet, Performance, Alien Mode. The list is read from the firmware.
+- Modes: Balanced, Performance, Cool, Quiet, Full Speed, Alien Mode (named as in AWCC). The list is read from the firmware.
   Alien Mode is the firmware's gaming mode (Game Shift): maximum CPU/GPU power limits and fans at full speed.
   Every mode button has a tooltip describing the mode.
 - 4 fans (2 CPU + 2 GPU): live speeds, CPU/GPU temperatures.
@@ -272,7 +272,7 @@ Then build the project:
 | Split CPU / GPU boost, +60% | ✅ CPU: CPU fans ~2100 → ~4100 rpm, GPU fans unchanged; GPU: the other way round; reset returns to the BIOS curve |
 | Custom fan curves, "Maximum cooling" profile, 20 s | ✅ CPU 71 °C → boost 100 %, CPU fans 2132 → 5571 rpm; GPU 51 °C → 74 %, GPU fans 2123 → 4954 rpm; eased down as the temperature fell; back to auto afterwards |
 | GPU overclock, Mild preset | ✅ offsets +100/+300 (set before the app) → +150/+450 → back to +100/+300 |
-| Restoring the mode at start | ✅ Balanced (A0) after a reboot, Balanced Performance (A1) restored at start |
+| Restoring the mode at start | ✅ Balanced (A0) after a reboot, Performance (A1) restored at start |
 | VRAM temperature (NVAPI thermal sensors) | ✅ 52.0 °C, same as GPU-Z «Memory Temperature» at the same moment |
 | Per-core temperatures (PawnIO, MSR 0x19C) | ✅ TjMax 105 °C, cores 56–74 °C, same as Core Temp |
 | Fan percentage (op 6), reading the boost (op 0x0C) | ❌ the firmware does not report them (−1 / always 0); not used in the UI |

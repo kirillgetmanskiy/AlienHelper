@@ -581,7 +581,7 @@ static class Program
                     case "read":
                         var snap = c.Read();
                         if (snap == null) { L("read: no AWCC"); break; }
-                        L($"profile=0x{snap.Profile:X2} gmode={snap.GMode} " +
+                        L($"profile=0x{snap.Profile:X2} gmode={c.Awcc?.GetGMode()} " +
                           string.Join(" ", snap.Fans.Select(f => $"fan{f.fan.Id:X2}={f.rpm}rpm/{f.pct}%/boost{f.boost}")) + " " +
                           string.Join(" ", snap.Temps.Select(t => $"{t.s.Name}={t.temp}C")));
                         break;

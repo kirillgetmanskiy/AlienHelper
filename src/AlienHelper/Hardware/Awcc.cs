@@ -21,10 +21,10 @@ public sealed class Awcc : IDisposable
         [0x98] = "Balanced Performance",
         [0x99] = "Performance",
         [0xA0] = "Balanced",
-        [0xA1] = "Balanced Performance",
+        [0xA1] = "Performance",   // names as AWCC's own thermal service gives them (UsttPerformance, UsttFullSpeed)
         [0xA2] = "Cool",
         [0xA3] = "Quiet",
-        [0xA4] = "Performance",
+        [0xA4] = "Full Speed",
         [0xA5] = "Battery Saver",
         [0xAB] = "Alien Mode",   // firmware "G-Mode" / Game Shift: max power limits and fans
     };
@@ -127,36 +127,18 @@ public sealed class Awcc : IDisposable
     public int GetFanPercent(byte fanId) { long r = Call("Thermal_Information", 0x06, fanId); return Failed(r) ? -1 : (int)r; }
     public int GetFanBoost(byte fanId) { long r = Call("Thermal_Information", 0x0C, fanId); return Failed(r) ? -1 : (int)r; }
     public int GetProfile() { long r = Call("Thermal_Information", 0x0B); return Failed(r) ? -1 : (int)(r & 0xFF); }
+    /// <summary>Diagnostics only: the firmware sets GameShift itself with the profile (on in Alien Mode, off in the others).</summary>
     public int GetGMode() { if (!HasGMode) return -1; long r = Call("GameShiftStatus", 0x02); return Failed(r) ? -1 : (int)r; }
 
     // ---------- writes (same operations AWCC performs) ----------
+    /// <summary>
+    /// Switches the thermal profile, Alien Mode (0xAB) included, in one call, as AWCC's thermal service does. AWCC never
+    /// writes GameShiftStatus: the firmware turns GameShift on with Alien Mode and off with any other profile.
+    /// </summary>
     public bool SetProfile(byte profile) => !Failed(Call("Thermal_Control", 0x01, profile));
 
     /// <summary>Boost only raises fan speed above the BIOS curve; 0 returns control to the BIOS.</summary>
     public bool SetFanBoost(byte fanId, byte boost) => !Failed(Call("Thermal_Control", 0x02, fanId, boost));
-
-    public bool SetGMode(bool on, byte fallbackProfile)
-    {
-        if (!HasGMode) return false;
-        // Op 1 is a toggle on most firmware, so only send it when the state differs.
-        bool ok = true;
-        if (on)
-        {
-            // after sleep the firmware can drop the profile while GameShift still reads "on"; writing the profile alone
-            // then seems to leave the lower GPU power limit in place, so GameShift goes off and on again, as a manual switch does
-            if (GetGMode() > 0 && GetProfile() != ProfileGMode)
-            {
-                Call("GameShiftStatus", 0x01, 0);
-                Thread.Sleep(300);
-            }
-            SetProfile(ProfileGMode);
-        }
-        int cur = GetGMode();
-        if (cur >= 0 && (cur != 0) != on)
-            ok = !Failed(Call("GameShiftStatus", 0x01, (byte)(on ? 1 : 0)));
-        if (!on) SetProfile(fallbackProfile);
-        return ok;
-    }
 
     public void Dispose() => _obj.Dispose();
 }

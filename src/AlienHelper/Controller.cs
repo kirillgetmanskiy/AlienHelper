@@ -12,7 +12,7 @@ public sealed class Controller : IDisposable
     public ScreenBrightness? Screen { get; }
     public Settings S { get; }
 
-    public sealed record Snapshot(int Profile, int GMode, List<(Awcc.Fan fan, int rpm, int pct, int boost)> Fans, List<(Awcc.Sensor s, int temp)> Temps);
+    public sealed record Snapshot(int Profile, List<(Awcc.Fan fan, int rpm, int pct, int boost)> Fans, List<(Awcc.Sensor s, int temp)> Temps);
 
     public Controller(Settings s)
     {
@@ -33,7 +33,7 @@ public sealed class Controller : IDisposable
         // percent and boost are not read: this firmware answers -1 / 0 for them, and every WMI call costs a few ms
         var fans = a.Fans.Select(f => (f, a.GetFanRpm(f.Id), -1, 0)).ToList();
         var temps = a.Sensors.Select(x => (x, a.GetTemp(x.Id))).ToList();
-        return new Snapshot(a.GetProfile(), a.GetGMode(), fans, temps);
+        return new Snapshot(a.GetProfile(), fans, temps);
     }
 
     /// <summary>Saves the current power mode so the next start restores it.</summary>
@@ -51,20 +51,14 @@ public sealed class Controller : IDisposable
     public Snapshot? ReadMode()
     {
         var a = Awcc;
-        return a == null ? null : new Snapshot(a.GetProfile(), -1, new(), new());
+        return a == null ? null : new Snapshot(a.GetProfile(), new(), new());
     }
 
     public bool SetProfile(byte p)
     {
         if (Awcc == null) return false;
         using var timed = Hitches.Time("mode switch");
-        bool ok;
-        if (p == Awcc.ProfileGMode) ok = Awcc.SetGMode(true, p);
-        else
-        {
-            if (Awcc.GetGMode() > 0) Awcc.SetGMode(false, p);
-            ok = Awcc.SetProfile(p);
-        }
+        bool ok = Awcc.SetProfile(p);
         if (ok)
         {
             S.Profile = p; S.GMode = p == Awcc.ProfileGMode; S.Save();
@@ -82,7 +76,7 @@ public sealed class Controller : IDisposable
     /// </summary>
     public void NotifyProfile(int p)
     {
-        if (p < 0 || p == _lastProfile || _reapplying || _emergency) return;
+        if (p < 0 || p == _lastProfile || _emergency) return;
         // right after sleep / unlock the firmware may switch modes on its own: put the chosen one back, do not adopt it
         if (Guarded && Awcc != null && p != WantedProfile) { Task.Run(RestoreMode); return; }
         // the mode was switched outside the app (G key, AWCC) away from Custom's base: Custom ends
@@ -185,57 +179,6 @@ public sealed class Controller : IDisposable
             SetProfile((byte)want);
         }
         catch (Exception ex) { Log.Warn("restore mode: " + ex.Message); }
-    }
-
-    /// <summary>Whether the GPU power watch wants NVML samples while no window shows them (Alien Mode on AC).</summary>
-    public bool WatchGpuPower => S.HoldGpuPower && Awcc != null && WantedProfile == Hardware.Awcc.ProfileGMode
-        && SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online;
-
-    long _lowSince = -1, _lastFix = -1;
-    readonly Queue<long> _fixes = new();
-    volatile bool _reapplying;
-    bool _gaveUp;
-
-    /// <summary>
-    /// Called with every GPU sample. Now and then the GPU drops to the low power limit (80 W on an RTX 5080 Laptop, the
-    /// Balanced one) under full load while the firmware still reports Alien Mode, and stays there until the mode is
-    /// switched away and back. When that lasts, the app does the same switch. A hot GPU is left alone (that drop is the
-    /// driver's own protection), and after three tries in ten minutes it stops and leaves a note in the log.
-    /// </summary>
-    public void NotifyGpuPower(float limitW, float drawW, int load, int temp, int profile)
-    {
-        long now = Environment.TickCount64;
-        bool low = WatchGpuPower && profile == Hardware.Awcc.ProfileGMode && limitW is > 0 and <= 90 && load >= 50 && temp is < 87;
-        if (!low || _reapplying || _emergency) { _lowSince = -1; return; }
-        if (_lowSince < 0) { _lowSince = now; return; }
-        if (now - _lowSince < 10000 || (_lastFix >= 0 && now - _lastFix < 60000)) return;
-        while (_fixes.Count > 0 && now - _fixes.Peek() > 600000) _fixes.Dequeue();
-        if (_fixes.Count >= 3)
-        {
-            if (!_gaveUp) Log.Warn($"gpu still held at {limitW:0} W in Alien Mode after {_fixes.Count} re-applies: leaving it");
-            _gaveUp = true;
-            return;
-        }
-        _gaveUp = false;
-        _fixes.Enqueue(now);
-        _lastFix = now;
-        _lowSince = -1;
-        Log.Info($"gpu held at {limitW:0} W in Alien Mode (draw {drawW:0} W, load {load}%, {temp} °C): re-applying the mode");
-        _reapplying = true;
-        Task.Run(() =>
-        {
-            try
-            {
-                using var timed = Hitches.Time("re-apply Alien Mode");
-                // the switch that helps by hand: another mode first, then Alien Mode with GameShift off and on again
-                byte other = Awcc!.Profiles.Contains((byte)0xA4) ? (byte)0xA4 : (byte)0xA0;
-                Awcc.SetProfile(other);
-                Thread.Sleep(700);
-                Awcc.SetGMode(true, other);
-            }
-            catch (Exception ex) { Log.Warn("re-apply Alien Mode: " + ex.Message); }
-            finally { Thread.Sleep(1500); _reapplying = false; }
-        });
     }
 
     /// <summary>Custom switched off: the current mode sets the boost again (Alien Mode 100 %, others auto).</summary>
@@ -653,7 +596,6 @@ public sealed class Controller : IDisposable
                 _emergencyFrom = from;
                 S.EmergencyFrom = from; S.Save();
                 _emergency = true;   // before the switch: Balanced must not become the user's mode
-                if (a.GetGMode() > 0) a.SetGMode(false, ProfileBalanced);
                 a.SetProfile(ProfileBalanced);
                 foreach (var f in a.Fans) a.SetFanBoost(f.Id, 100);
                 Log.Warn($"emergency mode: GPU {temp} °C{(cut ? ", the laptop cut the GPU power" : "")}: Balanced, fans 100 % until {S.EmergencyCoolC} °C (was {ModeLogName(from)})");
