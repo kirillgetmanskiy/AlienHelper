@@ -75,6 +75,8 @@ public sealed class TrayApp : ApplicationContext
         _tray.ContextMenuStrip.Opening += (_, _) => BuildMenu();
         BuildMenu();
         _plugins = new PluginManager(_c.S, _invoker, _overlay, (title, text) => _tray.ShowBalloonTip(5000, title, text, ToolTipIcon.None));
+        _c.Alert += (title, text) => { try { _invoker.BeginInvoke(() => _tray.ShowBalloonTip(8000, title, text, ToolTipIcon.Warning)); } catch { } };
+        _c.EmergencyChanged += () => { try { _invoker.BeginInvoke(async () => await _mon.Poll()); } catch { } };
         _plugins.Start();
 
         _mon.Updated += UpdateTooltip;

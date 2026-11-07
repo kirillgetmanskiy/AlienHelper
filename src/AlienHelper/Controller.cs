@@ -81,7 +81,7 @@ public sealed class Controller : IDisposable
     /// </summary>
     public void NotifyProfile(int p)
     {
-        if (p < 0 || p == _lastProfile || _reapplying) return;
+        if (p < 0 || p == _lastProfile || _reapplying || _emergency) return;
         // right after sleep / unlock the firmware may switch modes on its own: put the chosen one back, do not adopt it
         if (Guarded && Awcc != null && p != WantedProfile) { Task.Run(RestoreMode); return; }
         // the mode was switched outside the app (G key, AWCC) away from Custom's base: Custom ends
@@ -135,6 +135,14 @@ public sealed class Controller : IDisposable
     public bool SelectMode(int mode)
     {
         if (Awcc == null) return false;
+        if (_emergency && mode != EmergencyMode)
+        {
+            // the GPU is still hot: the choice is where the emergency mode returns to once it has cooled down
+            _emergencyFrom = mode; S.EmergencyFrom = mode; S.Save();
+            Log.Info($"emergency mode: will return to {ModeLogName(mode)}");
+            Alert?.Invoke(L.T("emerg.title"), L.T("emerg.later", ModeLogName(mode), S.EmergencyCoolC));
+            return true;
+        }
         if (mode == CustomMode)
         {
             bool was = S.FanCurve;
@@ -153,7 +161,7 @@ public sealed class Controller : IDisposable
     }
 
     /// <summary>The mode currently chosen: a firmware profile id or <see cref="CustomMode"/>.</summary>
-    public int CurrentMode(int firmwareProfile) => S.FanCurve ? CustomMode : firmwareProfile;
+    public int CurrentMode(int firmwareProfile) => _emergency ? EmergencyMode : S.FanCurve ? CustomMode : firmwareProfile;
 
     /// <summary>The firmware profile the app wants (Custom's base, or the last mode chosen).</summary>
     int WantedProfile => S.FanCurve ? CustomBase : S.Profile;
@@ -169,6 +177,7 @@ public sealed class Controller : IDisposable
     {
         try
         {
+            if (_emergency) return;   // Balanced on purpose until the GPU cools down
             int want = WantedProfile, cur = Awcc?.GetProfile() ?? -1;
             if (want < 0 || cur < 0 || cur == want) return;
             Log.Info($"mode changed to 0x{cur:X2} after sleep/unlock: back to 0x{want:X2}");
@@ -196,7 +205,7 @@ public sealed class Controller : IDisposable
     {
         long now = Environment.TickCount64;
         bool low = WatchGpuPower && profile == Hardware.Awcc.ProfileGMode && limitW is > 0 and <= 90 && load >= 50 && temp is < 87;
-        if (!low || _reapplying) { _lowSince = -1; return; }
+        if (!low || _reapplying || _emergency) { _lowSince = -1; return; }
         if (_lowSince < 0) { _lowSince = now; return; }
         if (now - _lowSince < 10000 || (_lastFix >= 0 && now - _lastFix < 60000)) return;
         while (_fixes.Count > 0 && now - _fixes.Peek() > 600000) _fixes.Dequeue();
@@ -446,6 +455,16 @@ public sealed class Controller : IDisposable
     {
         // Fan boost is not restored: the mode applied below sets it (Alien Mode 100%, others auto).
         if (S.FanBoost != 0 || S.FanBoostCpu != 0 || S.FanBoostGpu != 0) { S.FanBoost = S.FanBoostCpu = S.FanBoostGpu = 0; S.Save(); }
+        if (S.EmergencyFrom >= 0 && Awcc != null)
+        {
+            // the app ended (or crashed) in the emergency mode: Balanced and the fans at 100 % may still be on
+            int from = S.EmergencyFrom;
+            S.EmergencyFrom = -1;
+            S.FanBoost = S.FanBoostCpu = S.FanBoostGpu = -1;   // the mode below writes its boost again
+            S.Save();
+            Log.Info($"start: the emergency mode was on: back to {ModeLogName(from)}");
+            try { SelectMode(from); } catch (Exception ex) { Log.Warn("leave emergency mode: " + ex.Message); }
+        }
         if (!S.ApplyOnStart) return;
         // The BIOS starts in its default mode after a reboot: bring back the last mode used.
         if (Awcc != null && S.Profile >= 0 && Awcc.Profiles.Contains((byte)S.Profile))
@@ -463,6 +482,7 @@ public sealed class Controller : IDisposable
     /// <summary>On exit: hand the fans back to the BIOS so a boost never outlives the app.</summary>
     public void ReleaseFans()
     {
+        if (_emergency) try { LeaveEmergency(); } catch (Exception ex) { Log.Warn("leave emergency mode: " + ex.Message); }
         if (Awcc == null || (S.FanBoost == 0 && S.FanBoostCpu == 0 && S.FanBoostGpu == 0)) return;
         try { SetBoost(0); } catch { }
     }
@@ -542,13 +562,123 @@ public sealed class Controller : IDisposable
     }
 
     /// <summary>Name of the mode in use: "Custom" while it runs (the firmware then reports its base profile).</summary>
-    public string CurrentModeName(int firmwareProfile) => S.FanCurve ? "Custom" : ProfileName(firmwareProfile);
+    public string CurrentModeName(int firmwareProfile) => _emergency ? L.T("mode.emergency") : S.FanCurve ? "Custom" : ProfileName(firmwareProfile);
 
     /// <summary>Display name of a firmware profile id, or "unknown" if the firmware reports something unexpected.</summary>
     public string ProfileName(int p)
     {
         bool known = p >= 0 && Awcc.ProfileNames.ContainsKey((byte)p) && (Awcc == null || p == 0 || Awcc.Profiles.Contains((byte)p));
         return known ? Awcc.ProfileNames[(byte)p] : L.T("mode.unknown");
+    }
+
+    // ---------------- emergency mode ----------------
+
+    /// <summary>Pseudo mode id: the emergency mode, which only the app enters (GPU overheating), never the user.</summary>
+    public const int EmergencyMode = 0x101;
+
+    /// <summary>Firmware "Balanced" profile: the GPU gets its base power (80 W on an RTX 5080 Laptop).</summary>
+    public const byte ProfileBalanced = 0xA0;
+
+    volatile bool _emergency, _emergencyBusy;
+    int _emergencyFrom = -1;
+    long _hotSince = -1, _coolSince = -1, _warmAt = -1;
+
+    /// <summary>The emergency mode is on: Balanced and the fans at 100 % until the GPU cools down.</summary>
+    public bool EmergencyActive => _emergency;
+
+    /// <summary>Raised (any thread) with a title and a text for a notification.</summary>
+    public event Action<string, string>? Alert;
+
+    /// <summary>Raised (any thread) when the emergency mode started or ended.</summary>
+    public event Action? EmergencyChanged;
+
+    /// <summary>Whether GPU temperatures are wanted in the background for the emergency mode.</summary>
+    public bool WatchEmergency => (S.Emergency || _emergency) && Awcc != null && Awcc.Profiles.Contains(ProfileBalanced);
+
+    string ModeLogName(int mode) => mode == CustomMode ? "Custom" : ProfileName(mode);
+
+    /// <summary>
+    /// Called with every GPU sample. The GPU at <see cref="Settings.EmergencyHotC"/> for 3 s, or the laptop's own
+    /// protection (the GPU cut to the Balanced limit under load right after running hot), starts the emergency mode:
+    /// Balanced and the fans at 100 %. Once the GPU has stayed at <see cref="Settings.EmergencyCoolC"/> or below for
+    /// 10 s, the mode chosen before comes back.
+    /// </summary>
+    public void NotifyGpuTemp(int temp, float limitW, int load, int profile)
+    {
+        if (temp <= 0 || _emergencyBusy || Awcc == null) return;
+        long now = Environment.TickCount64;
+        if (temp >= S.EmergencyHotC - 3) _warmAt = now;
+        if (_emergency)
+        {
+            if (!S.Emergency) { EndEmergency("switched off"); return; }
+            if (temp > S.EmergencyCoolC) { _coolSince = -1; return; }
+            if (_coolSince < 0) { _coolSince = now; return; }
+            if (now - _coolSince >= 10000) EndEmergency($"GPU {temp} °C");
+            return;
+        }
+        if (!WatchEmergency) { _hotSince = -1; return; }
+        bool cut = profile >= 0 && profile != ProfileBalanced && limitW is > 0 and <= 90 && load >= 50 && _warmAt >= 0 && now - _warmAt < 60000;
+        if (temp < S.EmergencyHotC && !cut) { _hotSince = -1; return; }
+        if (_hotSince < 0) _hotSince = now;
+        if (!cut && now - _hotSince < 3000) return;   // a short spike is not overheating
+        StartEmergency(temp, cut);
+    }
+
+    void StartEmergency(int temp, bool cut)
+    {
+        _emergencyBusy = true;
+        _hotSince = _coolSince = -1;
+        Task.Run(() =>
+        {
+            try
+            {
+                var a = Awcc!;
+                int cur = a.GetProfile();
+                int from = S.FanCurve ? CustomMode : cur >= 0 && a.Profiles.Contains((byte)cur) ? cur : S.Profile;
+                _emergencyFrom = from;
+                S.EmergencyFrom = from; S.Save();
+                _emergency = true;   // before the switch: Balanced must not become the user's mode
+                if (a.GetGMode() > 0) a.SetGMode(false, ProfileBalanced);
+                a.SetProfile(ProfileBalanced);
+                foreach (var f in a.Fans) a.SetFanBoost(f.Id, 100);
+                Log.Warn($"emergency mode: GPU {temp} °C{(cut ? ", the laptop cut the GPU power" : "")}: Balanced, fans 100 % until {S.EmergencyCoolC} °C (was {ModeLogName(from)})");
+                Alert?.Invoke(L.T("emerg.title"), L.T("emerg.on", temp, S.EmergencyCoolC));
+            }
+            catch (Exception ex) { Log.Warn("emergency mode: " + ex.Message); }
+            finally { _emergencyBusy = false; EmergencyChanged?.Invoke(); }
+        });
+    }
+
+    void EndEmergency(string why)
+    {
+        _emergencyBusy = true;
+        Task.Run(() =>
+        {
+            try
+            {
+                int from = LeaveEmergency();
+                Log.Info($"emergency mode over ({why}): back to {ModeLogName(from)}");
+                Alert?.Invoke(L.T("emerg.title"), L.T("emerg.off", ModeLogName(from)));
+            }
+            catch (Exception ex) { Log.Warn("leave emergency mode: " + ex.Message); }
+            finally { _emergencyBusy = false; EmergencyChanged?.Invoke(); }
+        });
+    }
+
+    /// <summary>Back to the mode chosen before (it writes its own boost again); returns that mode.</summary>
+    int LeaveEmergency()
+    {
+        int from = _emergencyFrom >= 0 ? _emergencyFrom : S.EmergencyFrom;
+        _emergency = false;
+        _emergencyFrom = -1;
+        _hotSince = _coolSince = -1;
+        _lastProfile = -1;
+        S.EmergencyFrom = -1;
+        S.FanBoost = S.FanBoostCpu = S.FanBoostGpu = -1;   // the fans ran at 100 %: make the mode write its boost
+        S.Save();
+        if (from == CustomMode || (from >= 0 && Awcc!.Profiles.Contains((byte)from))) SelectMode(from);
+        else { from = S.Profile; SelectMode(from); }
+        return from;
     }
 
     public void Dispose()

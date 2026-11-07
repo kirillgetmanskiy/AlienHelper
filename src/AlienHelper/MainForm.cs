@@ -936,8 +936,8 @@ public sealed class MainForm : Form
             bar.History = i < _mon.Fans.Count ? _mon.Fans[i].Recent(80) : Array.Empty<float>();
             bar.Invalidate();
         }
-        foreach (var b in _profiles) b.Active = !_c.S.FanCurve && (byte)b.Tag! == snap.Profile;
-        _customMode.Active = _c.S.FanCurve;
+        foreach (var b in _profiles) b.Active = !_c.S.FanCurve && !_c.EmergencyActive && (byte)b.Tag! == snap.Profile;
+        _customMode.Active = _c.S.FanCurve && !_c.EmergencyActive;
         LockSliders();
         _modeCard.Hint = snap.Profile >= 0 || _c.S.FanCurve ? L.T("mode.now", _c.CurrentModeName(snap.Profile)) : null;
         _modeCard.Invalidate();

@@ -37,6 +37,7 @@ public sealed class SettingsForm : Form
         left = BuildCards(left);
         left = BuildPoll(left);
         left = BuildOverlay(left);
+        left = BuildEmergency(left);
         left = BuildLanguage(left);
         _x = S(M) + CardW + S(Gap);
         int right = S(M);
@@ -175,6 +176,49 @@ public sealed class SettingsForm : Form
         card.Controls.Add(slider);
         cy += S(26);
         var hint = new Label { Text = L.T("opt.poll.hint"), ForeColor = Muted, Font = Theme.Font(8f), AutoSize = false };
+        hint.Bounds = new Rectangle(S(Pad), cy, Inner, TextRenderer.MeasureText(hint.Text, hint.Font, new Size(Inner, 0), TextFormatFlags.WordBreak).Height + S(2));
+        card.Controls.Add(hint);
+        cy = hint.Bottom + S(2);
+        return Finish(card, cy);
+    }
+
+    /// <summary>The emergency mode: on/off and its two temperatures. The app enters it itself, never the user.</summary>
+    int BuildEmergency(int y)
+    {
+        if (_c.Awcc?.Profiles.Contains(Controller.ProfileBalanced) != true) return y;
+        var card = NewCard(L.T("emerg.card"), y, out int cy);
+        var on = AddToggle(card, ref cy, new Toggle(L.T("emerg.enable")) { On = _c.S.Emergency });
+        on.Toggled += (_, _) => { _c.S.Emergency = on.On; _c.S.Save(); };
+        Slider Row(string key, int min, int max, int value, Action<int> commit)
+        {
+            var label = new Label { ForeColor = Muted, Font = Theme.Font(9f), AutoSize = true, Location = new Point(S(Pad), cy + S(2)) };
+            void Show(int v) => label.Text = L.T(key, v);
+            Show(value);
+            card.Controls.Add(label);
+            cy += S(22);
+            var slider = new Slider { Minimum = min, Maximum = max, Value = value };
+            slider.SetBounds(S(Pad - 10), cy, Inner + S(20), S(24));   // the slider keeps 10 px of its own padding
+            slider.ValueChanged += (_, _) => Show(slider.Value);
+            slider.ValueCommitted += (_, _) => commit(slider.Value);
+            card.Controls.Add(slider);
+            cy += S(28);
+            return slider;
+        }
+        Slider? cool = null;
+        Row("emerg.hot", 75, 95, _c.S.EmergencyHotC, v =>
+        {
+            _c.S.EmergencyHotC = v;
+            // it ends only below where it starts: keep 5 °C between them
+            if (_c.S.EmergencyCoolC > v - 5) { _c.S.EmergencyCoolC = v - 5; cool!.Value = v - 5; }
+            _c.S.Save();
+        });
+        cool = Row("emerg.cool", 50, 90, _c.S.EmergencyCoolC, v =>
+        {
+            if (v > _c.S.EmergencyHotC - 5) { v = _c.S.EmergencyHotC - 5; cool!.Value = v; }
+            _c.S.EmergencyCoolC = v;
+            _c.S.Save();
+        });
+        var hint = new Label { Text = L.T("emerg.hint"), ForeColor = Muted, Font = Theme.Font(8f), AutoSize = false };
         hint.Bounds = new Rectangle(S(Pad), cy, Inner, TextRenderer.MeasureText(hint.Text, hint.Font, new Size(Inner, 0), TextFormatFlags.WordBreak).Height + S(2));
         card.Controls.Add(hint);
         cy = hint.Bottom + S(2);
