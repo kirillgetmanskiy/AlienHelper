@@ -344,7 +344,10 @@ public sealed class SensorMonitor : IDisposable
     {
         long now = Clock.ElapsedMilliseconds;
         if (r.PowerLimitW <= 0 || Math.Abs(r.PowerLimitW - gd.LoggedLimit) < 5 || now - gd.LimitLoggedAt < 10000) return;
-        Log.Info($"gpu power limit {gd.LoggedLimit:0} -> {r.PowerLimitW:0} W: mode 0x{Last?.Profile ?? -1:X2}, gameshift {Last?.GMode ?? -1}, draw {r.PowerW:0} W, load {r.Load}%, {r.Temp} °C");
+        // what the GPU limit followed: the driver's own reason, the firmware's temperatures, CPU and platform power
+        var temps = Last?.Temps is { Count: > 0 } t ? string.Join(" ", t.Select(x => $"{x.s.Id:X2}={x.temp}")) : "-";
+        Log.Info($"gpu power limit {gd.LoggedLimit:0} -> {r.PowerLimitW:0} W: mode 0x{Last?.Profile ?? -1:X2}, gameshift {Last?.GMode ?? -1}, draw {r.PowerW:0} W, load {r.Load}%, {r.Temp} °C"
+            + $"; held by {Nvml.ReasonText(r.Reasons)}; cpu {(CpuPowerW > 0 ? $"{CpuPowerW:0} W" : "?")}, platform {(PsysW > 0 ? $"{PsysW:0} W" : "?")}, firmware temps {temps}");
         gd.LoggedLimit = r.PowerLimitW;
         gd.LimitLoggedAt = now;
     }
