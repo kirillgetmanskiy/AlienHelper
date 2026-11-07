@@ -292,7 +292,11 @@ public sealed class OverlayForm : Form
         if (IsHandleCreated) SetWindowDisplayAffinity(Handle, hide ? 0x11u : 0u);   // WDA_EXCLUDEFROMCAPTURE / WDA_NONE
     }
 
-    public void KeepOnTop() => SetWindowPos(Handle, new IntPtr(-1), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010); // NOSIZE|NOMOVE|NOACTIVATE
+    public void KeepOnTop()
+    {
+        using var timed = Hitches.Time("overlay keep on top");
+        SetWindowPos(Handle, new IntPtr(-1), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010); // NOSIZE|NOMOVE|NOACTIVATE
+    }
 
     /// <summary>Hand-placed position if the user moved it, otherwise the chosen corner.</summary>
     public void Reposition()
@@ -562,6 +566,7 @@ public sealed class OverlayForm : Form
 
     protected override void OnPaint(PaintEventArgs e)
     {
+        using var timed = Hitches.Time("overlay paint");
         using var dark = Theme.UseOverlay();   // over games the overlay stays dark unless the theme covers it
         if (BackColor != OverlayBack) BackColor = OverlayBack;
         var g = e.Graphics;

@@ -221,8 +221,10 @@ public sealed class SensorMonitor : IDisposable
             _since = now;
             return _task = Task.Run(() =>
             {
+                var at = DateTime.Now; long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
                 try { read(); _failed = false; }
                 catch (Exception ex) { if (!_failed) Log.Warn($"sensors: '{_name}' failed: {ex.Message}"); _failed = true; }
+                finally { Hitches.Mark(_name, at, System.Diagnostics.Stopwatch.GetElapsedTime(t0).TotalMilliseconds); }
             });
         }
     }
