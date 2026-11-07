@@ -15,7 +15,7 @@
     <Product>Alien Helper</Product>
     <AssemblyTitle>Alien Helper</AssemblyTitle>
     <RootNamespace>AlienHelper</RootNamespace>
-    <Version>0.1.26</Version>
+    <Version>0.1.27</Version>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>

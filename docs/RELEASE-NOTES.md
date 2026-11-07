@@ -2,6 +2,27 @@
 
 **English** | [Русский](#что-нового)
 
+## 0.1.27
+
+- **Games no longer stutter with VideoCap on.** VideoCap 0.4.3 stops raising its buttons under the overlay above the
+  game twice a second, and hides them while a game is full screen. The buttons come back on the desktop and in
+  windowed games.
+- **Diagnostics for stutter.** While the overlay is on, a frame of the game in front that takes far longer than usual is
+  noted in the log with what the app was doing at that moment.
+
+### Microsoft Store: "What's new in this version" (en-us)
+
+```
+• Fixed: short freezes in games while the VideoCap plugin was on.
+• The log notes long game frames with what the app was doing then, to find the cause of stutter.
+```
+
+### Microsoft Store: "Notes for certification"
+
+```
+Fix: the bundled plugin AlienHelperVideoCap (add-on 9NPBGN51VF76, now 0.4.3) re-raised its small topmost button window above full-screen games twice a second, which made games stutter. It now raises the window only when it appears or moves, and hides it while another app covers the whole screen. The app also logs game frames that take far longer than usual (from the ETW present events it already reads for the FPS overlay). No new capabilities. To test the add-on: buy it in Settings → Plugins, then tray menu → Alien Helper VideoCap → Start recording.
+```
+
 ## 0.1.26
 
 - **Emergency mode.** When the GPU overheats, the app switches to Balanced (the GPU gets up to 80 W) and runs the fans
@@ -119,6 +140,21 @@ This update adds plugin support and the first paid plugin, Alien Helper VideoCap
 # Что нового
 
 [English](#release-notes) | **Русский**
+
+## 0.1.27
+
+- **Игры больше не подвисают при включённом VideoCap.** VideoCap 0.4.3 больше не поднимает свои кнопки под оверлеем
+  поверх игры дважды в секунду и прячет их, пока игра на весь экран. На рабочем столе и в оконных играх кнопки
+  видны как раньше.
+- **Диагностика подвисаний.** Пока включён оверлей, кадр игры, который идёт намного дольше обычного, попадает в лог
+  вместе с тем, что программа делала в этот момент.
+
+### Microsoft Store: «Новые возможности этой версии» (ru-ru)
+
+```
+• Исправлено: короткие подвисания в играх при включённом плагине VideoCap.
+• Лог отмечает долгие кадры игры и то, что программа делала в это время, чтобы найти причину подвисаний.
+```
 
 ## 0.1.26
 
