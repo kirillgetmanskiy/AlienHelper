@@ -2,6 +2,24 @@
 
 **English** | [Русский](#что-нового)
 
+## 0.1.25
+
+- **Diagnostics for the GPU power limit.** In Alien Mode the GPU sometimes drops to 80 W under load. When the limit
+  changes, the log now also records what the NVIDIA driver says holds the clocks, CPU and platform power, and the
+  firmware's temperatures. This is to find the cause; nothing changes in how the app controls the laptop.
+
+### Microsoft Store: "What's new in this version" (en-us)
+
+```
+• More detailed diagnostics in the log when the GPU power limit changes, to find why the GPU sometimes drops to 80 W in Alien Mode.
+```
+
+### Microsoft Store: "Notes for certification"
+
+```
+Diagnostics only: the app logs more details (NVIDIA driver clock reasons via NVML, CPU and platform power) when the GPU power limit changes. No new capabilities, no change in behaviour. The add-on AlienHelperVideoCap (9NPBGN51VF76) works as in 0.1.24: buy it in Settings → Plugins, then tray menu → Alien Helper VideoCap → Start recording.
+```
+
 ## 0.1.24
 
 - **A bought add-on now turns on.** In 0.1.23 Alien Helper did not see that an add-on without a package (such as
@@ -75,6 +93,18 @@ This update adds plugin support and the first paid plugin, Alien Helper VideoCap
 # Что нового
 
 [English](#release-notes) | **Русский**
+
+## 0.1.25
+
+- **Диагностика лимита мощности видеокарты.** В режиме Alien Mode видеокарта под нагрузкой иногда падает до 80 W.
+  Теперь при смене лимита в лог пишется, что ограничивает частоты по словам драйвера NVIDIA, мощность процессора и
+  платформы и температуры из прошивки. Это нужно, чтобы найти причину; управление ноутбуком не меняется.
+
+### Microsoft Store: «Новые возможности этой версии» (ru-ru)
+
+```
+• Подробная диагностика в логе при смене лимита мощности видеокарты, чтобы найти, почему она иногда падает до 80 W в Alien Mode.
+```
 
 ## 0.1.24
 
