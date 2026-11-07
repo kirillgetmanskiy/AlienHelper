@@ -127,7 +127,7 @@ public sealed class Awcc : IDisposable
     public int GetFanPercent(byte fanId) { long r = Call("Thermal_Information", 0x06, fanId); return Failed(r) ? -1 : (int)r; }
     public int GetFanBoost(byte fanId) { long r = Call("Thermal_Information", 0x0C, fanId); return Failed(r) ? -1 : (int)r; }
     public int GetProfile() { long r = Call("Thermal_Information", 0x0B); return Failed(r) ? -1 : (int)(r & 0xFF); }
-    /// <summary>Diagnostics only: the firmware sets GameShift itself with the profile (on in Alien Mode, off in the others).</summary>
+    /// <summary>GameShift as the firmware reports it: it sets it itself with the profile (on in Alien Mode, off in the others).</summary>
     public int GetGMode() { if (!HasGMode) return -1; long r = Call("GameShiftStatus", 0x02); return Failed(r) ? -1 : (int)r; }
 
     // ---------- writes (same operations AWCC performs) ----------
@@ -135,7 +135,22 @@ public sealed class Awcc : IDisposable
     /// Switches the thermal profile, Alien Mode (0xAB) included, in one call, as AWCC's thermal service does. AWCC never
     /// writes GameShiftStatus: the firmware turns GameShift on with Alien Mode and off with any other profile.
     /// </summary>
-    public bool SetProfile(byte profile) => !Failed(Call("Thermal_Control", 0x01, profile));
+    public bool SetProfile(byte profile)
+    {
+        // The firmware can report Alien Mode while GameShift is off (the boost key dark, Alien Mode's power not applied);
+        // writing 0xAB again then changes nothing. As by hand: another profile first, then Alien Mode.
+        if (profile == ProfileGMode && HasGMode && GetProfile() == ProfileGMode && GetGMode() == 0)
+        {
+            byte other = Profiles.FirstOrDefault(p => p != ProfileGMode && p != ProfileManual);
+            if (other != 0)
+            {
+                Log.Info($"Alien Mode reported with GameShift off: through 0x{other:X2} and back");
+                Call("Thermal_Control", 0x01, other);
+                Thread.Sleep(500);
+            }
+        }
+        return !Failed(Call("Thermal_Control", 0x01, profile));
+    }
 
     /// <summary>Boost only raises fan speed above the BIOS curve; 0 returns control to the BIOS.</summary>
     public bool SetFanBoost(byte fanId, byte boost) => !Failed(Call("Thermal_Control", 0x02, fanId, boost));
