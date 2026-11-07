@@ -8,7 +8,7 @@ namespace AlienHelper.Hardware;
 /// </summary>
 public sealed class Nvml : IDisposable
 {
-    public sealed record Reading(int Temp, int MemTemp, int CoreMhz, int MemMhz, float PowerW, int Load, float VramUsedGb, float VramTotalGb, float PowerLimitW);
+    public sealed record Reading(int Temp, int MemTemp, int CoreMhz, int MemMhz, float PowerW, int Load, float VramUsedGb, float VramTotalGb, float PowerLimitW, ulong Reasons = 0);
 
     readonly IntPtr[] _devs;
     readonly uint[] _maxMw;   // highest power reading we believe, per GPU
@@ -72,7 +72,20 @@ public sealed class Nvml : IDisposable
         float used = -1, total = -1;
         if (nvmlDeviceGetMemoryInfo(dev, out var mi) == 0) { used = mi.used / 1073741824f; total = mi.total / 1073741824f; }
         float limit = nvmlDeviceGetEnforcedPowerLimit(dev, out uint lim) == 0 ? lim / 1000f : -1;
-        return new Reading(temp, MemTemp(dev), core, mem, pw, load, used, total, limit);
+        ulong reasons = nvmlDeviceGetCurrentClocksThrottleReasons(dev, out ulong why) == 0 ? why : 0;
+        return new Reading(temp, MemTemp(dev), core, mem, pw, load, used, total, limit, reasons);
+    }
+
+    /// <summary>What holds the clocks down (nvmlClocksEventReasons bits), for the log; "-" when nothing does.</summary>
+    public static string ReasonText(ulong r)
+    {
+        var names = new (ulong bit, string name)[]
+        {
+            (0x4, "power cap"), (0x8, "hw slowdown"), (0x20, "sw thermal"), (0x40, "hw thermal"),
+            (0x80, "power brake"), (0x2, "app clocks"), (0x10, "sync boost"), (0x100, "display"),
+        };
+        var on = names.Where(n => (r & n.bit) != 0).Select(n => n.name).ToList();
+        return on.Count > 0 ? string.Join("+", on) : "-";
     }
 
     static int MemTemp(IntPtr dev)
@@ -109,6 +122,7 @@ public sealed class Nvml : IDisposable
     [DllImport(Dll)] static extern int nvmlDeviceGetMaxClockInfo(IntPtr dev, int type, out uint mhz);
     [DllImport(Dll)] static extern int nvmlDeviceGetPowerUsage(IntPtr dev, out uint mw);
     [DllImport(Dll)] static extern int nvmlDeviceGetEnforcedPowerLimit(IntPtr dev, out uint mw);
+    [DllImport(Dll)] static extern int nvmlDeviceGetCurrentClocksThrottleReasons(IntPtr dev, out ulong reasons);
     [DllImport(Dll)] static extern int nvmlDeviceGetPowerManagementLimitConstraints(IntPtr dev, out uint minMw, out uint maxMw);
     [DllImport(Dll)] static extern int nvmlDeviceGetUtilizationRates(IntPtr dev, out Utilization u);
     [DllImport(Dll)] static extern int nvmlDeviceGetPciInfo_v3(IntPtr dev, out PciInfo p);
