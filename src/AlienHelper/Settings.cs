@@ -32,7 +32,6 @@ public sealed class Settings
     public bool StartMinimized { get; set; } = true;   // start in the tray without opening the window
     public bool GuardLights { get; set; }               // put our lighting back after AWCC's lighting agent repaints it
     public int AwccStartType { get; set; } = 2;          // DellTechHub's start type before AWCC was switched off here
-    public bool HoldGpuPower { get; set; } = true;      // re-apply Alien Mode when the GPU is held at the low power limit in it
     public bool Emergency { get; set; } = true;         // GPU overheating: Balanced and the fans at 100 % until it cools down
     public int EmergencyHotC { get; set; } = 87;        // the emergency mode starts at this GPU temperature
     public int EmergencyCoolC { get; set; } = 72;       // ... and ends once the GPU is this cool
