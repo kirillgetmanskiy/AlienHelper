@@ -119,7 +119,8 @@ public sealed class FanCurveDriver : IDisposable
         if (snap == null || snap.Fans.Count == 0) return;   // a mode-only sample carries no temperatures
         int Temp(string name) => snap.Temps.FirstOrDefault(t => t.s.Name == name).temp;
         // Alien Mode as Custom's base runs on the curves too (alien = false); only outside Custom it means 100 %
-        Feed(Temp("CPU"), Temp("GPU"), SensorMonitor.Clock.ElapsedMilliseconds, alien: false);
+        // the emergency mode runs the fans at 100 % itself: the curves wait and write again after it
+        Feed(Temp("CPU"), Temp("GPU"), SensorMonitor.Clock.ElapsedMilliseconds, alien: _c.EmergencyActive);
     }
 
     /// <summary>One step of both groups for these temperatures at time <paramref name="now"/> (ms).</summary>

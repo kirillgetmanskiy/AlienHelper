@@ -167,7 +167,7 @@ public sealed class SensorMonitor : IDisposable
             if (need == Need.None && boost) need = Need.Mode;
             // Alien Mode: the GPU power limit is watched in the background as well (see Controller.NotifyGpuPower)
             bool watchOnly = (need & ~Need.Mode) == Need.None;
-            if (watchOnly && _c.WatchGpuPower) need |= Need.Mode | Need.Gpu;
+            if (watchOnly && (_c.WatchGpuPower || _c.WatchEmergency)) need |= Need.Mode | Need.Gpu;
             if (need == Need.None)
             {
                 // nothing on screen and no boost to watch: sleep until a window asks for data
@@ -361,7 +361,11 @@ public sealed class SensorMonitor : IDisposable
                 if (gd.Fake) { var f = Gpus[0].Stats; gd.Stats = f; gd.Temp = Gpus[0].Temp; continue; }
                 var r = _nvml!.Read(gd.Index);
                 LogPowerLimit(gd, r);
-                if (gd.Index == 0) _c.NotifyGpuPower(r.PowerLimitW, r.PowerW, r.Load, r.Temp, Last?.Profile ?? -1);
+                if (gd.Index == 0)
+                {
+                    _c.NotifyGpuPower(r.PowerLimitW, r.PowerW, r.Load, r.Temp, Last?.Profile ?? -1);
+                    _c.NotifyGpuTemp(r.Temp, r.PowerLimitW, r.Load, Last?.Profile ?? -1);
+                }
                 int mem = r.MemTemp > 0 ? r.MemTemp : _nvapi?.MemoryTemp(gd.Bus, gd.Index) ?? -1;
                 gd.Stats = new GpuStats(r.Load, r.CoreMhz, r.MemMhz, r.PowerW, r.VramUsedGb, r.VramTotalGb, mem);
                 gd.Temp = r.Temp;
