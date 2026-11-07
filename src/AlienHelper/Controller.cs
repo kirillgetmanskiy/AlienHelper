@@ -167,14 +167,6 @@ public sealed class Controller : IDisposable
     /// <summary>For a while after sleep or unlock, a mode change by the firmware is undone instead of adopted.</summary>
     public void GuardMode(int seconds) => _guardUntil = Environment.TickCount64 + seconds * 1000L;
 
-    /// <summary>
-    /// Whether the firmware runs mode <paramref name="want"/>: the profile matches and, for Alien Mode, GameShift is on
-    /// (the firmware can report Alien Mode with GameShift off, and then Alien Mode's power is not applied).
-    /// </summary>
-    bool InMode(int want, int cur) => cur == want && (want != Hardware.Awcc.ProfileGMode || Awcc?.GetGMode() != 0);
-
-    string GameShiftNote(int cur) => cur == Hardware.Awcc.ProfileGMode ? ", GameShift off" : "";
-
     /// <summary>Puts the chosen mode back if the firmware switched away from it.</summary>
     public void RestoreMode()
     {
@@ -182,11 +174,54 @@ public sealed class Controller : IDisposable
         {
             if (_emergency) return;   // Balanced on purpose until the GPU cools down
             int want = WantedProfile, cur = Awcc?.GetProfile() ?? -1;
-            if (want < 0 || cur < 0 || InMode(want, cur)) return;
-            Log.Info($"mode changed to 0x{cur:X2}{GameShiftNote(cur)} after sleep/unlock: back to 0x{want:X2}");
+            if (want < 0 || cur < 0 || cur == want) return;
+            Log.Info($"mode changed to 0x{cur:X2} after sleep/unlock: back to 0x{want:X2}");
             SetProfile((byte)want);
         }
         catch (Exception ex) { Log.Warn("restore mode: " + ex.Message); }
+    }
+
+    /// <summary>Whether the GPU limit watch wants NVML samples while no window shows them (Alien Mode on AC).</summary>
+    public bool WatchGpuLimit => Awcc != null && WantedProfile == Hardware.Awcc.ProfileGMode
+        && SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online;
+
+    long _lowSince = -1;
+    readonly Queue<long> _flips = new();
+    volatile bool _flipping;
+    bool _gaveUp;
+
+    /// <summary>
+    /// Called with every GPU sample. Each profile write flips the GPU power limit between 80 W and 175 W on this
+    /// laptop, whatever the profile, so Alien Mode can end up at 80 W (writing it again while it runs did that). The
+    /// limit shows even with the GPU idle: in Alien Mode it should read the high one. When it stays at the low one for
+    /// 5 s, Alien Mode is written once more, which flips it back. A hot GPU is left alone (the emergency mode handles
+    /// heat), and after three flips in ten minutes the app stops and leaves a note in the log.
+    /// </summary>
+    public void NotifyGpuLimit(float limitW, int temp, int profile)
+    {
+        long now = Environment.TickCount64;
+        bool low = WatchGpuLimit && profile == Hardware.Awcc.ProfileGMode && limitW is > 0 and <= 90 && temp is > 0 and < 85;
+        if (!low || _flipping || _emergency) { _lowSince = -1; return; }
+        if (_lowSince < 0) { _lowSince = now; return; }
+        if (now - _lowSince < 5000) return;
+        _lowSince = -1;
+        while (_flips.Count > 0 && now - _flips.Peek() > 600000) _flips.Dequeue();
+        if (_flips.Count >= 3)
+        {
+            if (!_gaveUp) Log.Warn($"gpu limit still {limitW:0} W in Alien Mode after {_flips.Count} flips: leaving it");
+            _gaveUp = true;
+            return;
+        }
+        _gaveUp = false;
+        _flips.Enqueue(now);
+        Log.Info($"gpu limit {limitW:0} W in Alien Mode ({temp} °C): writing Alien Mode once more to flip it back");
+        _flipping = true;
+        Task.Run(() =>
+        {
+            try { using var timed = Hitches.Time("flip gpu limit"); Awcc!.WriteProfile(Hardware.Awcc.ProfileGMode); }
+            catch (Exception ex) { Log.Warn("flip gpu limit: " + ex.Message); }
+            finally { Thread.Sleep(3000); _flipping = false; }
+        });
     }
 
     /// <summary>Custom switched off: the current mode sets the boost again (Alien Mode 100 %, others auto).</summary>
@@ -438,7 +473,7 @@ public sealed class Controller : IDisposable
             try
             {
                 int cur = Awcc.GetProfile();
-                if (!InMode(S.Profile, cur)) { Log.Info($"start: restoring mode 0x{S.Profile:X2} (was 0x{cur:X2}{GameShiftNote(cur)})"); SetProfile((byte)S.Profile); }
+                if (cur != S.Profile) { Log.Info($"start: restoring mode 0x{S.Profile:X2} (was 0x{cur:X2})"); SetProfile((byte)S.Profile); }
             }
             catch (Exception ex) { Log.Warn("restore mode: " + ex.Message); }
         }
