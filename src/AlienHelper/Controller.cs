@@ -320,8 +320,10 @@ public sealed class Controller : IDisposable
         bool ok;
         lock (_kbLock)
         {
-            ok = k.SetKeyColors(id => byId.TryGetValue(id, out var c) ? (c.R, c.G, c.B) : ((byte)0, (byte)0, (byte)0), S.KeyboardLights, fast,
-                fast ? MappedIds() : null);
+            // while the fans are boosted the firmware lights the boost key (F6) itself: leave that LED to it
+            var ids = fast ? MappedIds() : Enumerable.Range(0, S.KeyboardLights).ToList();
+            if (BoostKeyLit) ids.Remove(BoostKeyId);
+            ok = k.SetKeyColors(id => byId.TryGetValue(id, out var c) ? (c.R, c.G, c.B) : ((byte)0, (byte)0, (byte)0), S.KeyboardLights, fast, ids);
             if (!fast) ok &= k.SetBrightness(S.KeyboardBrightness, S.KeyboardLights);
         }
         if (save)
@@ -342,6 +344,16 @@ public sealed class Controller : IDisposable
     /// <summary>Frame statistics (diagnostics).</summary>
     public int FrameCount;
     public double FrameMsTotal;
+
+    /// <summary>LED of the boost key (F6 on the Area-51), honouring the user's calibration.</summary>
+    int BoostKeyId => KeyboardLayout.Keys.FirstOrDefault(k => k.Name == "F6") is { } f6 ? LightId(f6) : -1;
+
+    /// <summary>
+    /// The firmware shows the boost on the boost key's own light: in Alien Mode, with the fans boosted to 100 % and in
+    /// the emergency mode. Keyboard colors and effects then leave that LED alone, or the two would take turns.
+    /// </summary>
+    bool BoostKeyLit => _emergency || _lastProfile == Hardware.Awcc.ProfileGMode
+        || S.FanBoost >= 100 || S.FanBoostCpu >= 100 || S.FanBoostGpu >= 100;
 
     /// <summary>Every LED id the layout uses (main + extra), so animation frames skip unused ids.</summary>
     List<int> MappedIds() =>
