@@ -2,6 +2,32 @@
 
 **English** | [Русский](#что-нового)
 
+## 0.1.28
+
+- **Alien Mode keeps its full GPU power.** On the Area-51 every mode switch flips the GPU power limit between the low
+  and the high one (80 W and 175 W on an RTX 5080 Laptop), so choosing Alien Mode while it already ran, or turning
+  Custom on over it, left the GPU at 80 W. The app no longer writes a mode that already runs, and if Alien Mode ever
+  ends up at the low limit it brings the high one back by itself. The setting "Hold GPU power in Alien Mode" is gone:
+  this now always works.
+- **Modes switch the way Alienware Command Center does.** One firmware call per mode; GameShift is left to the
+  firmware, which turns it on with Alien Mode and off with the other modes.
+- **Mode names as in AWCC:** Performance (was "Balanced Performance") and Full Speed (was "Performance").
+- The boost key (F6) lights when the fans run at 100 %. In Custom the fans follow your curves, so F6 can stay dark
+  while Alien Mode's power is on.
+
+### Microsoft Store: "What's new in this version" (en-us)
+
+```
+• Fixed: Alien Mode sometimes left the GPU at its low power limit, for example after turning Custom on.
+• Modes switch the way Alienware Command Center does; mode names as in AWCC.
+```
+
+### Microsoft Store: "Notes for certification"
+
+```
+Fix: on the Alienware 16 Area-51 every thermal profile write (AWCC WMI Thermal_Control) flips the NVIDIA GPU power limit between its low and high value, so re-writing the running Alien Mode profile left the GPU at the low limit. The app no longer writes a profile that already runs and, in Alien Mode on AC power, writes it once more if NVML reports the low limit for 5 seconds (at most three times in ten minutes). The app no longer writes GameShiftStatus. The setting "Hold GPU power in Alien Mode" was removed. No new capabilities. The add-on AlienHelperVideoCap (9NPBGN51VF76) works as in 0.1.27.
+```
+
 ## 0.1.27
 
 - **Games no longer stutter with VideoCap on.** VideoCap 0.4.3 stops raising its buttons under the overlay above the
@@ -140,6 +166,26 @@ This update adds plugin support and the first paid plugin, Alien Helper VideoCap
 # Что нового
 
 [English](#release-notes) | **Русский**
+
+## 0.1.28
+
+- **Alien Mode сохраняет полную мощность видеокарты.** На Area-51 каждое переключение режима меняет лимит мощности
+  видеокарты с низкого на высокий и обратно (80 и 175 Вт на RTX 5080 Laptop), поэтому повторный выбор Alien Mode или
+  включение Custom поверх него оставляли видеокарту на 80 Вт. Программа больше не записывает уже включённый режим, а
+  если Alien Mode всё же окажется на низком лимите, сама возвращает высокий. Настройки «Удерживать мощность GPU в
+  Alien Mode» больше нет: это работает всегда.
+- **Режимы переключаются так же, как в Alienware Command Center.** Один вызов прошивки на режим; GameShift прошивка
+  включает сама вместе с Alien Mode и выключает с остальными режимами.
+- **Названия режимов как в AWCC:** Performance (было «Balanced Performance») и Full Speed (было «Performance»).
+- Клавиша буста (F6) горит, когда вентиляторы на 100 %. В Custom вентиляторы идут по вашим кривым, поэтому F6 может
+  не гореть, хотя мощность Alien Mode включена.
+
+### Microsoft Store: «Новые возможности этой версии» (ru-ru)
+
+```
+• Исправлено: Alien Mode иногда оставлял видеокарту на низком лимите мощности, например после включения Custom.
+• Режимы переключаются так же, как в Alienware Command Center; названия режимов как в AWCC.
+```
 
 ## 0.1.27
 
