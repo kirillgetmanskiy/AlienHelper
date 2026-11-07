@@ -155,7 +155,7 @@ public sealed class FanCurveDriver : IDisposable
         g.WrittenAt = now;
         void Do()
         {
-            try { Write(g.Sensor, v); }
+            try { using var timed = Hitches.Time("fan curve write"); Write(g.Sensor, v); }
             catch (Exception ex) { Log.Warn($"curve {g.Name}: {ex.Message}"); }
             finally { g.Busy = false; }
         }

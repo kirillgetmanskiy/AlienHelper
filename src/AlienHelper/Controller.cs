@@ -57,6 +57,7 @@ public sealed class Controller : IDisposable
     public bool SetProfile(byte p)
     {
         if (Awcc == null) return false;
+        using var timed = Hitches.Time("mode switch");
         bool ok;
         if (p == Awcc.ProfileGMode) ok = Awcc.SetGMode(true, p);
         else
@@ -225,6 +226,7 @@ public sealed class Controller : IDisposable
         {
             try
             {
+                using var timed = Hitches.Time("re-apply Alien Mode");
                 // the switch that helps by hand: another mode first, then Alien Mode with GameShift off and on again
                 byte other = Awcc!.Profiles.Contains((byte)0xA4) ? (byte)0xA4 : (byte)0xA0;
                 Awcc.SetProfile(other);
@@ -408,6 +410,7 @@ public sealed class Controller : IDisposable
                 {
                     // checked under the same lock StopAnimation takes: once it returns, no stale frame can follow
                     if (gen != _animGen) return;
+                    using var timed = Hitches.Time("keyboard frame");
                     SendScheme(frame, fast: true, save: false);
                 }
                 FrameCount++; FrameMsTotal += sw.Elapsed.TotalMilliseconds;

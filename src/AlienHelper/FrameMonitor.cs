@@ -26,6 +26,7 @@ public sealed class FrameMonitor : IDisposable
     Thread? _thread;
     readonly Dictionary<int, string> _names = new();
     readonly Dictionary<int, double> _lastWall = new();   // pid -> wall clock of its latest event
+    readonly Dictionary<int, (DateTime at, double usual)> _lastPresent = new();   // pid -> its last present, usual frame time
 
     public string? Error { get; private set; }
     public bool Running => _session != null;
@@ -56,7 +57,7 @@ public sealed class FrameMonitor : IDisposable
     {
         _session?.Dispose();
         _session = null;
-        lock (_lock) _presents.Clear();
+        lock (_lock) { _presents.Clear(); _lastPresent.Clear(); }
     }
 
     void OnEvent(TraceEvent e)
@@ -68,11 +69,29 @@ public sealed class FrameMonitor : IDisposable
         double ts = e.TimeStampRelativeMSec;
         lock (_lock)
         {
+            CheckHitch(e.ProcessID, e.TimeStamp);
             if (!_presents.TryGetValue(e.ProcessID, out var list)) _presents[e.ProcessID] = list = new List<double>(512);
             list.Add(ts);
             _lastWall[e.ProcessID] = _clock.Elapsed.TotalMilliseconds;
             if (list.Count > 4000) list.RemoveRange(0, 2000);
         }
+    }
+
+    /// <summary>
+    /// Diagnostics: a frame of the foreground game that took over 50 ms and over 3x its usual time (a game running
+    /// smoothly, under 25 ms a frame) goes to <see cref="Hitches"/> with what the app was doing then.
+    /// </summary>
+    void CheckHitch(int pid, DateTime at)
+    {
+        if (pid == Environment.ProcessId) return;
+        if (!_lastPresent.TryGetValue(pid, out var last)) { _lastPresent[pid] = (at, 16); return; }
+        double ms = (at - last.at).TotalMilliseconds;
+        if (ms <= 0) return;
+        bool hitch = ms > 50 && ms < 2000 && ms > 3 * last.usual && last.usual < 25;
+        // the usual frame time follows smooth frames only, so one hitch does not raise it
+        double usual = hitch ? last.usual : last.usual + (Math.Min(ms, 100) - last.usual) * 0.05;
+        _lastPresent[pid] = (at, usual);
+        if (hitch && pid == ForegroundPid()) Hitches.Frame(Name(pid), at, ms, last.usual);
     }
 
     /// <summary>Stats for the foreground process, or the busiest presenting process if the foreground doesn't present.</summary>

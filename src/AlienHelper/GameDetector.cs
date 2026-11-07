@@ -59,7 +59,9 @@ public static class GameDetector
         long now = Environment.TickCount64;
         if (now < _until) return _last;
         _until = now + 900;
-        var (game, reason, name) = Check();
+        (bool game, Reason reason, string name) r;
+        using (Hitches.Time("game detect")) r = Check();
+        var (game, reason, name) = r;
         _last = game;
         // logged when a game comes or goes, not on every switch between ordinary windows
         string line = game ? $"{name} ({reason})" : "";
