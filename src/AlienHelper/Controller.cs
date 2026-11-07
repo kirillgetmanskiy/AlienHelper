@@ -167,6 +167,14 @@ public sealed class Controller : IDisposable
     /// <summary>For a while after sleep or unlock, a mode change by the firmware is undone instead of adopted.</summary>
     public void GuardMode(int seconds) => _guardUntil = Environment.TickCount64 + seconds * 1000L;
 
+    /// <summary>
+    /// Whether the firmware runs mode <paramref name="want"/>: the profile matches and, for Alien Mode, GameShift is on
+    /// (the firmware can report Alien Mode with GameShift off, and then Alien Mode's power is not applied).
+    /// </summary>
+    bool InMode(int want, int cur) => cur == want && (want != Hardware.Awcc.ProfileGMode || Awcc?.GetGMode() != 0);
+
+    string GameShiftNote(int cur) => cur == Hardware.Awcc.ProfileGMode ? ", GameShift off" : "";
+
     /// <summary>Puts the chosen mode back if the firmware switched away from it.</summary>
     public void RestoreMode()
     {
@@ -174,8 +182,8 @@ public sealed class Controller : IDisposable
         {
             if (_emergency) return;   // Balanced on purpose until the GPU cools down
             int want = WantedProfile, cur = Awcc?.GetProfile() ?? -1;
-            if (want < 0 || cur < 0 || cur == want) return;
-            Log.Info($"mode changed to 0x{cur:X2} after sleep/unlock: back to 0x{want:X2}");
+            if (want < 0 || cur < 0 || InMode(want, cur)) return;
+            Log.Info($"mode changed to 0x{cur:X2}{GameShiftNote(cur)} after sleep/unlock: back to 0x{want:X2}");
             SetProfile((byte)want);
         }
         catch (Exception ex) { Log.Warn("restore mode: " + ex.Message); }
@@ -430,7 +438,7 @@ public sealed class Controller : IDisposable
             try
             {
                 int cur = Awcc.GetProfile();
-                if (cur != S.Profile) { Log.Info($"start: restoring mode 0x{S.Profile:X2} (was 0x{cur:X2})"); SetProfile((byte)S.Profile); }
+                if (!InMode(S.Profile, cur)) { Log.Info($"start: restoring mode 0x{S.Profile:X2} (was 0x{cur:X2}{GameShiftNote(cur)})"); SetProfile((byte)S.Profile); }
             }
             catch (Exception ex) { Log.Warn("restore mode: " + ex.Message); }
         }
