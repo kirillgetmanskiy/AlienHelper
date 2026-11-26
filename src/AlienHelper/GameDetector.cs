@@ -22,6 +22,8 @@ public static class GameDetector
         "explorer", "chrome", "msedge", "firefox", "opera", "brave", "vivaldi", "vlc", "mpc-hc64", "mpc-be64",
         "PotPlayerMini64", "Video.UI", "Microsoft.Media.Player", "POWERPNT", "AlienHelper", "AlienHelperTest", "ApplicationFrameHost",
         "ShellExperienceHost", "SearchHost", "StartMenuExperienceHost", "LockApp",
+        // messengers and players that go full screen with video (Telegram's media viewer counted as a game)
+        "Telegram", "Discord", "WhatsApp", "Zoom", "ms-teams", "Spotify", "obs64",
         // launchers live next to their games but are not games
         "steam", "steamwebhelper", "EpicGamesLauncher", "EpicWebHelper", "GalaxyClient", "EADesktop", "EALauncher",
         "Battle.net", "UbisoftConnect", "upc", "RiotClientServices", "RiotClientUx", "XboxPcApp", "GameBar",

@@ -342,14 +342,18 @@ public sealed class SensorMonitor : IDisposable
         return init.IsCompleted;
     }
 
-    /// <summary>Diagnostics: the GPU power limit in the log whenever it moves, with the mode and the load at that moment.</summary>
+    /// <summary>
+    /// Diagnostics: the GPU power limit in the log when it jumps (80 W against 175 W: the mode's limit), with the mode
+    /// and the load at that moment. The driver's own steps of a few watts under load (power cap, temperature) are left
+    /// out: they made up most of the log.
+    /// </summary>
     void LogPowerLimit(GpuDevice gd, Nvml.Reading r)
     {
         long now = Clock.ElapsedMilliseconds;
-        if (r.PowerLimitW <= 0 || Math.Abs(r.PowerLimitW - gd.LoggedLimit) < 5 || now - gd.LimitLoggedAt < 10000) return;
+        if (r.PowerLimitW <= 0 || Math.Abs(r.PowerLimitW - gd.LoggedLimit) < 30 || now - gd.LimitLoggedAt < 10000) return;
         // what the GPU limit followed: the driver's own reason, the firmware's temperatures, CPU and platform power
         var temps = Last?.Temps is { Count: > 0 } t ? string.Join(" ", t.Select(x => $"{x.s.Id:X2}={x.temp}")) : "-";
-        Log.Info($"gpu power limit {gd.LoggedLimit:0} -> {r.PowerLimitW:0} W: mode 0x{Last?.Profile ?? -1:X2}, draw {r.PowerW:0} W, load {r.Load}%, {r.Temp} °C"
+        Log.Info($"gpu power limit {gd.LoggedLimit:0} -> {r.PowerLimitW:0} W: mode 0x{Last?.Profile ?? -1:X2}, draw {(r.PowerW >= 0 ? $"{r.PowerW:0} W" : "?")}, load {r.Load}%, {r.Temp} °C"
             + $"; held by {Nvml.ReasonText(r.Reasons)}; cpu {(CpuPowerW > 0 ? $"{CpuPowerW:0} W" : "?")}, platform {(PsysW > 0 ? $"{PsysW:0} W" : "?")}, firmware temps {temps}");
         gd.LoggedLimit = r.PowerLimitW;
         gd.LimitLoggedAt = now;

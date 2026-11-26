@@ -2,6 +2,30 @@
 
 **English** | [Русский](#что-нового)
 
+## 0.1.29
+
+- **Custom and the chosen mode no longer get lost.** At start the app brings back Custom's own mode (not the last
+  firmware mode), and for a few seconds puts it back if the firmware still shows the old one. A mode switched outside
+  the app (G key, AWCC) now counts only once two readings in a row agree: a single wrong reading around a firmware
+  hang used to end Custom.
+- **Telegram is no longer taken for a game** when it shows a video full screen; the same for Discord, WhatsApp, Zoom,
+  Teams, Spotify and OBS.
+- A shorter log: the GPU power limit is written only when it jumps (for example 80 W against 175 W), not on every
+  small step under load.
+
+### Microsoft Store: "What's new in this version" (en-us)
+
+```
+• Fixed: Custom and the chosen mode could be lost at start or after a firmware hang.
+• Telegram, Discord and other messengers showing a video full screen are no longer taken for games.
+```
+
+### Microsoft Store: "Notes for certification"
+
+```
+Fixes only. At start the app restores the firmware profile Custom runs on and, for 20 seconds, writes the chosen profile again if the firmware still reports another one. A profile change made outside the app is accepted only when two consecutive readings agree. Messenger and player apps were added to the list of apps never treated as games. The GPU power limit is logged only on large changes. No new capabilities. The add-on AlienHelperVideoCap (9NPBGN51VF76) works as in 0.1.28.
+```
+
 ## 0.1.28
 
 - **Alien Mode keeps its full GPU power.** On the Area-51 every mode switch flips the GPU power limit between the low
@@ -166,6 +190,24 @@ This update adds plugin support and the first paid plugin, Alien Helper VideoCap
 # Что нового
 
 [English](#release-notes) | **Русский**
+
+## 0.1.29
+
+- **Custom и выбранный режим больше не теряются.** При старте программа возвращает режим, на котором работает
+  Custom (а не последний режим прошивки), и несколько секунд ставит его снова, если прошивка ещё показывает старый.
+  Режим, переключённый вне программы (клавиша G, AWCC), теперь принимается, только если два чтения подряд совпали:
+  одно неверное чтение во время зависания прошивки раньше выключало Custom.
+- **Telegram больше не считается игрой**, когда показывает видео на весь экран; так же Discord, WhatsApp, Zoom,
+  Teams, Spotify и OBS.
+- Лог короче: лимит мощности видеокарты пишется только при скачке (например 80 и 175 Вт), а не на каждый мелкий шаг
+  под нагрузкой.
+
+### Microsoft Store: «Новые возможности этой версии» (ru-ru)
+
+```
+• Исправлено: Custom и выбранный режим могли сбрасываться при запуске или после зависания прошивки.
+• Telegram, Discord и другие мессенджеры с видео на весь экран больше не считаются играми.
+```
 
 ## 0.1.28
 
