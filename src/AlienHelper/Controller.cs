@@ -68,7 +68,7 @@ public sealed class Controller : IDisposable
         return ok;
     }
 
-    int _lastProfile = -1;
+    int _lastProfile = -1, _seenProfile = -1;
 
     /// <summary>
     /// Called with every sensor sample. The first sample (app start) and any mode switched outside the app
@@ -76,7 +76,14 @@ public sealed class Controller : IDisposable
     /// </summary>
     public void NotifyProfile(int p)
     {
-        if (p < 0 || p == _lastProfile || _emergency) return;
+        if (p < 0 || _emergency) return;
+        // the firmware's embedded controller now and then hangs for ~5 s (ACPI EC timeout), and a read around it can
+        // be wrong: a mode other than the chosen one counts only once two samples in a row agree (Custom ended on such
+        // a single read)
+        bool confirmed = p == _seenProfile;
+        _seenProfile = p;
+        if (p == _lastProfile) return;
+        if (Awcc != null && p != WantedProfile && !confirmed) return;
         // right after sleep / unlock the firmware may switch modes on its own: put the chosen one back, do not adopt it
         if (Guarded && Awcc != null && p != WantedProfile) { Task.Run(RestoreMode); return; }
         // the mode was switched outside the app (G key, AWCC) away from Custom's base: Custom ends
@@ -467,15 +474,19 @@ public sealed class Controller : IDisposable
             try { SelectMode(from); } catch (Exception ex) { Log.Warn("leave emergency mode: " + ex.Message); }
         }
         if (!S.ApplyOnStart) return;
-        // The BIOS starts in its default mode after a reboot: bring back the last mode used.
-        if (Awcc != null && S.Profile >= 0 && Awcc.Profiles.Contains((byte)S.Profile))
+        // The BIOS starts in its default mode after a reboot: bring back the last mode used (Custom's base in Custom).
+        int want = WantedProfile;
+        if (Awcc != null && want >= 0 && Awcc.Profiles.Contains((byte)want))
         {
             try
             {
                 int cur = Awcc.GetProfile();
-                if (cur != S.Profile) { Log.Info($"start: restoring mode 0x{S.Profile:X2} (was 0x{cur:X2})"); SetProfile((byte)S.Profile); }
+                if (cur != want) { Log.Info($"start: restoring mode 0x{want:X2} (was 0x{cur:X2})"); SetProfile((byte)want); }
             }
             catch (Exception ex) { Log.Warn("restore mode: " + ex.Message); }
+            // the firmware may still be on its old mode for a moment (seen: Alien Mode written, Performance read back):
+            // put the chosen mode back instead of adopting the old one, which ended Custom and forgot the choice
+            GuardMode(20);
         }
         ApplyLights();
     }
